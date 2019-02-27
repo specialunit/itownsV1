@@ -45,6 +45,15 @@ class PlanarLayer extends TiledGeometryLayer {
         this.maxSubdivisionLevel = this.maxSubdivisionLevel || 5.0;
         this.maxDeltaElevation = this.maxDeltaElevation || 4.0;
     }
+
+    preUpdate(context, changeSources) {
+        const fov = THREE.Math.degToRad(context.camera.camera3D.fov * 0.5);
+        const ratioHorizon = 0.1;
+        const distanceToGround = context.camera.camera3D.position.z;
+        context.horizon = distanceToGround / Math.sin(Math.atan(ratioHorizon * Math.tan(fov)));
+
+        return super.preUpdate(context, changeSources);
+    }
 }
 
 export default PlanarLayer;

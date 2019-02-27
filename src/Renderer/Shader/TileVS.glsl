@@ -25,5 +25,6 @@ void main() {
         #include <fog_vertex>
         vUv = vec3(uv_wgs84, (uv_pm > 0.) ? uv_pm : uv_wgs84.y); // set pm=wgs84 if pm=0 (not computed)
         vNormal = normalize ( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        fogDepth = length(mvPosition.xyz);
 #endif
 }

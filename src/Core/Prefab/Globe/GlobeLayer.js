@@ -13,6 +13,7 @@ let magnitudeSquared = 0.0;
 
 // vectors for operation purpose
 const scaledHorizonCullingPoint = new THREE.Vector3();
+const scaledToSphere = new THREE.Vector3(1.0, 1.0, ellipsoidSizes.x / ellipsoidSizes.z);
 
 /**
  * @property {boolean} isGlobeLayer - Used to checkout whether this layer is a
@@ -88,6 +89,16 @@ class GlobeLayer extends TiledGeometryLayer {
         // pre-horizon culling
         cameraPosition.copy(context.camera.camera3D.position).applyMatrix4(worldToScaledEllipsoid);
         magnitudeSquared = cameraPosition.lengthSq() - 1.0;
+
+        // pre-horizon subdivision
+        scaledHorizonCullingPoint.copy(context.camera.camera3D.position).multiply(scaledToSphere);
+
+        const distanceToCenter = scaledHorizonCullingPoint.length();
+        const distanceToHorizon = (distanceToCenter ** 2 - ellipsoidSizes.x ** 2) ** 0.5;
+        const distanceToGround = Math.max(distanceToCenter - ellipsoidSizes.x, 0);
+        const factor = Math.min(distanceToGround / ellipsoidSizes.x, 1.0) ** 0.25;
+        // context.horizon = distanceToHorizon - (distanceToHorizon - distanceToGround) * 0.75 * (1 - factor);
+        context.horizon = distanceToHorizon - (distanceToHorizon - distanceToGround) * 0.2 * (1 - factor);
 
         return super.preUpdate(context, changeSources);
     }

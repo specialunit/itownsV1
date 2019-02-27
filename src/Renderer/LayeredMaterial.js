@@ -153,6 +153,7 @@ class LayeredMaterial extends THREE.RawShaderMaterial {
         setUniformProperty(this, 'overlayAlpha', 0);
         setUniformProperty(this, 'overlayColor', new THREE.Color(1.0, 0.3, 0.0));
         setUniformProperty(this, 'objectId', 0);
+        setUniformProperty(this, 'horizonDistance', 1000000000.0);
 
         // > 0 produces gaps,
         // < 0 causes oversampling of textures

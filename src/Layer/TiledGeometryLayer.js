@@ -234,6 +234,10 @@ class TiledGeometryLayer extends GeometryLayer {
                     node.material.fogDistance = context.view.fogDistance;
                 }
 
+                if (context.horizon != undefined) {
+                    node.material.horizonDistance = context.horizon;
+                }
+
                 if (!requestChildrenUpdate) {
                     return ObjectRemovalHelper.removeChildren(this, node);
                 }
@@ -396,6 +400,13 @@ class TiledGeometryLayer extends GeometryLayer {
             0.0,
             context.camera.camera3D.position.distanceTo(boundingSphereCenter) - node.boundingSphere.radius * subdivisionVector.x);
 
+        let o = 0.0;
+        if (context.horizon) {
+            const a = context.horizon / (800.0 * 6378137.0);
+            o += 10.0 / (1.0 + Math.exp(-a * (distance - context.horizon)));
+            // return false;
+        }
+
         // Size projection on pixel of bounding
         node.screenSize = context.camera._preSSE * (2 * node.boundingSphere.radius * subdivisionVector.x) / distance;
 
@@ -403,7 +414,7 @@ class TiledGeometryLayer extends GeometryLayer {
         // For the projection of a texture's texel to be less than or equal to one pixel
         const sse = node.screenSize / (SIZE_DIAGONAL_TEXTURE * 2);
 
-        return this.sseSubdivisionThreshold < sse;
+        return this.sseSubdivisionThreshold * (1 + o) < sse;
     }
 }
 
