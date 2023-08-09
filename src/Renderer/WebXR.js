@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
 
 async function shutdownXR(session) {
     if (session) {
@@ -6,6 +7,11 @@ async function shutdownXR(session) {
     }
 }
 
+/**
+ *
+ * @param {*} view  dsfsdf
+ * @param {*} options webXR, callback
+ */
 const initializeWebXR = (view, options) => {
     const scale = options.scale || 1.0;
 
@@ -27,6 +33,9 @@ const initializeWebXR = (view, options) => {
                 view.notifyChange(view.camera.camera3D, true);
             }
         };
+
+        initControllers(webXRManager);
+
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
         xr.enabled = true;
@@ -41,6 +50,7 @@ const initializeWebXR = (view, options) => {
 
         const baseReferenceSpace = xr.getReferenceSpace();
         const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
+
         xr.setReferenceSpace(teleportSpaceOffset);
 
         view.camera.camera3D = xr.getCamera();
@@ -52,14 +62,91 @@ const initializeWebXR = (view, options) => {
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && view.camera.camera3D.cameras[0]) {
+                if (options.callback) {
+                    options.callback();
+                }
                 view.camera.camera3D.updateMatrix();
                 view.camera.camera3D.updateMatrixWorld(true);
+                if (view.scene.matrixWorldAutoUpdate === true) {
+                    view.scene.updateMatrixWorld();
+                }
+
                 view.notifyChange(view.camera.camera3D, true);
             }
 
             view.mainLoop.step(view, timestamp);
         });
     });
+
+    function initControllers(webXRManager) {
+        const controllerModelFactory = new XRControllerModelFactory();
+        const leftController = webXRManager.getController(0);
+        leftController.name = 'leftController';
+        const rightController = webXRManager.getController(1);
+        rightController.name = 'rightController';
+        bindControllerListeners(leftController);
+        bindControllerListeners(rightController);
+        const leftGripController = webXRManager.getControllerGrip(0);
+        leftGripController.name = 'leftGripController';
+        const rightGripController = webXRManager.getControllerGrip(1);
+        rightGripController.name = 'rightGripController';
+        bindGripController(controllerModelFactory, leftGripController);
+        bindGripController(controllerModelFactory, rightGripController);
+    }
+
+    function applyScalePosition(group3D, scale) {
+        group3D.position.multiplyScalar(-scale);
+    }
+
+    function bindControllerListeners(controller) {
+        controller.addEventListener('disconnected', function removeCtrl() {
+            this.remove(this.children[0]);
+        });
+        controller.addEventListener('connected', function addCtrl(event) {
+            this.add(buildController(event.data));
+            // applyScalePosition(this, scale);
+            console.log('after binding');
+        });
+        // controller.matrix.makeScale(scale, scale, scale);
+        view.scene.add(controller);
+    }
+
+    function bindGripController(controllerModelFactory, gripController) {
+        gripController.add(controllerModelFactory.createControllerModel(gripController));
+        // var cameraTargetPosition = view.controls.getCameraCoordinate();
+        // var meshCoord = cameraTargetPosition;
+        // controllerGrip.position.copy(meshCoord.as(view.referenceCrs));
+        // controllerGrip.updateMatrixWorld();
+        applyScalePosition(gripController, scale);
+        view.scene.add(gripController);
+    }
+
+    function buildController(data) {
+        const params = { geometry: {}, material: {} };
+        // let cameraTargetPosition = view.controls.getCameraCoordinate();
+        // let meshCoord = cameraTargetPosition;
+        // let projectedCoords = meshCoord.as(view.referenceCrs);
+
+        switch (data.targetRayMode) {
+            case 'tracked-pointer':
+                params.geometry = new THREE.BufferGeometry();
+
+                params.geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3));
+                params.geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
+
+                params.material = new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending });
+                return new THREE.Line(params.geometry, params.material);
+
+            case 'gaze':
+                params.geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
+                params.material = new THREE.MeshBasicMaterial({ opacity: 0.5, transparent: true });
+
+                // geometry.position.copy(meshCoord.as(view.referenceCrs));
+                return new THREE.Mesh(params.geometry, params.material);
+            default:
+                break;
+        }
+    }
 };
 
 export default initializeWebXR;

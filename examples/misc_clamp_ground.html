@@ -65,12 +65,12 @@
 
                 // position of the mesh
                 var meshCoord = cameraTargetPosition;
-                meshCoord.altitude += 30;
+               // meshCoord.altitude += 30;
 
                 // position and orientation of the mesh
                 mesh.position.copy(meshCoord.as(view.referenceCrs));
-                mesh.lookAt(new THREE.Vector3(0, 0, 0));
-                mesh.rotateX(Math.PI / 2);
+                //mesh.lookAt(new THREE.Vector3(0, 0, 0));
+               // mesh.rotateX(Math.PI / 2);
 
                 // update coordinate of the mesh
                 mesh.updateMatrixWorld();
