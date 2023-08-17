@@ -58,6 +58,9 @@
             const vrButton = VRButton.createButton(view.renderer);
             viewerDiv.appendChild(vrButton);
 
+            // Setup loading screen and debug menu
+            setupLoadingScreen(viewerDiv, view);
+            var debugMenu = new GuiTools('menuDiv', view);
 
 
             // ---------- DISPLAY ORTHO-IMAGES : ----------
@@ -67,8 +70,9 @@
             // object. See `Layer` documentation for more info.
             itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then((config) => {
                 config.source = new itowns.WMTSSource(config.source);
-                view.addLayer(new itowns.ColorLayer('Ortho', config),
-                );
+                view.addLayer(
+                    new itowns.ColorLayer('Ortho', config),
+                ).then(debugMenu.addLayerGUI.bind(debugMenu));
             });
 
             // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
@@ -78,9 +82,7 @@
             function addElevationLayerFromConfig(config) {
                 config.source = new itowns.WMTSSource(config.source);
                 contextXR.elevationLayer = new itowns.ElevationLayer(config.id, config);
-                view.addLayer(
-                    contextXR.elevationLayer,
-                );
+                view.addLayer(contextXR.elevationLayer).then(debugMenu.addLayerGUI.bind(debugMenu));
             }
 
 
@@ -94,36 +96,36 @@
 
                 var cameraTargetPosition = view.controls.getCameraCoordinate();
                 var meshCoord = cameraTargetPosition;
-                meshCoord.altitude += 100;
+                meshCoord.altitude += 50;
 
                 contextXR.raycaster.ray.origin.copy(meshCoord.as(view.referenceCrs));
 
-				contextXR.marker = new itowns.THREE.Mesh(
-					new itowns.THREE.CircleGeometry( 10, 32 ),
-					new itowns.THREE.MeshBasicMaterial( { color: 0xbcbcbc } )
-				);
-                contextXR.marker.position.copy(meshCoord.as(view.referenceCrs));
-                contextXR.marker.lookAt(new itowns.THREE.Vector3(0, 0, 0));
-				view.scene.add(contextXR.marker);
+                view.scene.add(contextXR.raycaster);
 
                 contextXR.floor = new itowns.THREE.Mesh(
 					new itowns.THREE.PlaneGeometry( 10000, 10000, 1, 1 ),
 					new itowns.THREE.MeshBasicMaterial( { color: 0xff0000, side: itowns.THREE.DoubleSide } )
 				);
-
-
-
-
+                contextXR.floor.name = "floor";
                 // position and orientation of the mesh
                 contextXR.floor.position.copy(meshCoord.as(view.referenceCrs));
                 contextXR.floor.lookAt(new itowns.THREE.Vector3(0, 0, 0));
-               // contextXR.floor.rotateX(Math.PI / 2);
 
                 // update coordinate of the mesh
                 contextXR.floor.updateMatrixWorld();
-
                 // add the mesh to the scene
                 view.scene.add(contextXR.floor);
+
+                meshCoord.altitude += 1;
+                contextXR.marker = new itowns.THREE.Mesh(
+					new itowns.THREE.CircleGeometry( 500, 32 ),
+					new itowns.THREE.MeshBasicMaterial( { color: 0xbcbcbc, side: itowns.THREE.DoubleSide } )
+				);
+                contextXR.marker.position.copy(meshCoord.as(view.referenceCrs));
+                contextXR.marker.lookAt(new itowns.THREE.Vector3(0, 0, 0));
+                contextXR.marker.name = "marker";
+                contextXR.marker.updateMatrixWorld();
+				view.scene.add(contextXR.marker);
 
                 view.notifyChange();
             }
@@ -131,7 +133,6 @@
             function addControllers() {
 
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
-                //view.mainLoop.gfxEngine.renderer.xr.enabled = true;
                  contextXR.controller1 = bindListeners(0);
                  contextXR.controller2 = bindListeners(1);
 
@@ -145,48 +146,75 @@
                     const controller = contextXR.renderer.xr.getController(index);
                     controller.addEventListener( 'selectstart', onSelectStart );
                     controller.addEventListener( 'selectend', onSelectEnd );
-                    //var cameraTargetPosition = view.controls.getCameraCoordinate();
-                    //var meshCoord = cameraTargetPosition;
-                    //meshCoord.altitude += 30;
-
-                    //controller.position.copy(meshCoord.as(view.referenceCrs));
-                    //controller.updateMatrixWorld();
                     return controller;
                 }
 
                 function onSelectStart() {
-                    console.log("selecting");
                     this.userData.isSelecting = true;
                 }
 
                 function onSelectEnd() {
-                    view.camera.camera3D.far = 20000000000;
-                    console.log("stop selecting");
                     this.userData.isSelecting = false;
 					if ( contextXR.INTERSECTION ) {
-                        // try force z to 0 to keep its altitude but "maybe" it wont work as easy with a globe
-                        // doesn't seem to be a delta but the destination coordinate;
+                        console.log(contextXR.INTERSECTION);
 
                         const cameraPos = view.camera.position().clone();
-                        const newCoordIntersection = new itowns.Coordinates(cameraPos.crs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
-                        const newCoordIntersection2 = newCoordIntersection.as(view.referenceCrs)
-                        view.camera.setPosition(newCoordIntersection2);
-                        const offsetPosition = { x: - contextXR.INTERSECTION.x, y: - contextXR.INTERSECTION.y, z: - contextXR.INTERSECTION.z, w: 1 };
-                       // const vectorOffsetPosition = new itowns.THREE.Vector3( contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z );
+                        const newCoordIntersectionproj = new itowns.Coordinates(cameraPos.crs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, cameraPos.z);
+
+                        showPosition('intersect', contextXR.INTERSECTION, 0x00ff00);
+                        showPosition('simulated_intersect', newCoordIntersectionproj.as(view.referenceCrs), 0xffffff);
 
                         var position = view.camera.position();
-                        var geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
-                        const trans = view.camera.camera3D.position.clone().multiplyScalar(-scale).applyQuaternion(geodesicNormal);
+                        const offsetRotation = new itowns.THREE.Quaternion();
 
-                        const transform = new XRRigidTransform( trans, geodesicNormal );
+                       // compute targeted position relative to the origine camera.
+                        const trans = { x: view.camera.initialPosition.x - newCoordIntersectionproj.x, y: view.camera.initialPosition.y - newCoordIntersectionproj.y, z:  view.camera.initialPosition.z - newCoordIntersectionproj.z, w: 1 };
+                        const transform = new XRRigidTransform( trans, offsetRotation );
                         const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-                        contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
+                     //   contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
                     }
-                    console.log('and then...');
                 }
-               // animate();
             }
 
+            function showPosition(name, coordinates, color, radius = 50) {
+                var existingChild;
+                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
+
+                    if(existingChild) {
+                        existingChild.position.copy(coordinates);
+                    }
+                    else {
+                        const previousPos = new itowns.THREE.Mesh(
+					        new itowns.THREE.SphereGeometry( radius, 16, 8 ),
+					        new itowns.THREE.MeshBasicMaterial( { color: color, wireframe: true } )
+				        );
+                        previousPos.name = name;
+                        previousPos.position.copy(coordinates);
+                        view.scene.add(previousPos);
+                    }
+                }
+
+                function showPositionLine(name, coordinates, color, upSize) {
+                    var existingChild;
+                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
+
+                    if(existingChild) {
+                        existingChild.position.copy(coordinates);
+                    }
+                    else {
+                        const points = [];
+                        points.push( new itowns.THREE.Vector3( 0, 0, 0 ) );
+                        points.push( new itowns.THREE.Vector3( 0, upSize, 0 ) );
+
+                const line = new itowns.THREE.Line(
+                    new itowns.THREE.BufferGeometry().setFromPoints(points),
+                    new itowns.THREE.LineBasicMaterial({ color: color, vertexColors: true, blending: itowns.THREE.AdditiveBlending }));
+                    line.position.copy(coordinates);
+                    line.updateMatrixWorld();
+                    view.scene.add(line);
+                    }
+
+                }
 
 
             function render() {
@@ -198,7 +226,7 @@
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller1.matrixWorld );
                     contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller1.matrixWorld );
                     contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects( [ contextXR.floor ] ); //TODO intersect terrain
+                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                     }
@@ -206,20 +234,38 @@
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller2.matrixWorld );
                     contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller2.matrixWorld );
                     contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects( [ contextXR.floor ] );
+                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                     }
                 }
 
+
+                // position is equals to the controller context,
+                // maybe apply matrix of the object to reverse ?
                 if ( contextXR.INTERSECTION )
                 {
                     console.log('intersection ', contextXR.INTERSECTION);
-                    contextXR.marker.position.copy( contextXR.INTERSECTION );
+
+                   var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
+
+                    var coordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord);
+                    coordOnTerrain.coord.altitude += 30;
+
+                    showPosition('findMe', intersectionCoord, 0xfeff00, 20000);
+                    showPositionLine('findMe2', intersectionCoord, 0xfe0c00, 20000000);
+                    // FIXME position on the ground as an unknown delta... find why
+                    //
+                    var cameraTargetPosition = view.controls.getCameraCoordinate();
+                    console.log('intersection on ground ', coordOnTerrain.coord.as(view.referenceCrs));
+                    console.log('camera pos', cameraTargetPosition.as(view.referenceCrs));
+
+                    // DEBUG if you intersect directly based on the fake floor you can just give contextXR.floor as copy position.
+                    view.meshPointer.position.copy(intersectionCoord);
+
+                    contextXR.marker.position.copy(intersectionCoord);
                 }
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
-                // FIXME this seems weird as it must be already done elsewhere. find a way to bind to it.
-              //  contextXR.renderer.render( view.scene, view.camera.camera3D );
             }
 
 
@@ -232,7 +278,7 @@
                 var THREE = itowns.THREE;
                 var geometry = new THREE.CylinderGeometry(0, 10, 60, 8);
                 var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                var mesh = new THREE.Mesh(geometry, material);
+                var meshPointer = new THREE.Mesh(geometry, material);
 
                 // get the position on the globe, from the camera
                 var cameraTargetPosition = view.controls.getLookAtCoordinate();
@@ -242,18 +288,18 @@
                 meshCoord.altitude += 30;
 
                 // position and orientation of the mesh
-                mesh.position.copy(meshCoord.as(view.referenceCrs));
-                mesh.lookAt(new THREE.Vector3(0, 0, 0));
-                mesh.rotateX(Math.PI / 2);
+                meshPointer.position.copy(meshCoord.as(view.referenceCrs));
+                meshPointer.lookAt(new THREE.Vector3(0, 0, 0));
+                meshPointer.rotateX(Math.PI / 2);
 
                 // update coordinate of the mesh
-                mesh.updateMatrixWorld();
+                meshPointer.updateMatrixWorld();
 
                 // add the mesh to the scene
-                view.scene.add(mesh);
+                view.scene.add(meshPointer);
 
                 // make the object usable from outside of the function
-                view.mesh = mesh;
+                view.meshPointer = meshPointer;
                 view.notifyChange();
             }
 
@@ -263,11 +309,12 @@
                 console.info('Globe initialized');
 
 
-               // addMeshToScene();
+               addMeshToScene();
             });
 
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+
         </script>
     </body>
 </html>

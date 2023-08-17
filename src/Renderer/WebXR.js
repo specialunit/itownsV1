@@ -42,6 +42,7 @@ const initializeWebXR = (view, options) => {
         xr.getReferenceSpace('local');
 
         const position = view.camera.position();
+        view.camera.initialPosition = position.clone();
         const geodesicNormal = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
 
         const quat = new THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
@@ -54,6 +55,7 @@ const initializeWebXR = (view, options) => {
         xr.setReferenceSpace(teleportSpaceOffset);
 
         view.camera.camera3D = xr.getCamera();
+        view.camera.camera3D.far = 20000000000;
         view.camera.resize(view.camera.width, view.camera.height);
 
         document.addEventListener('keydown', exitXRSession, false);
@@ -92,8 +94,10 @@ const initializeWebXR = (view, options) => {
         rightGripController.name = 'rightGripController';
         bindGripController(controllerModelFactory, leftGripController);
         bindGripController(controllerModelFactory, rightGripController);
+        view.scene.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
     }
 
+    // TODO fix scale world.
     function applyScalePosition(group3D, scale) {
         group3D.position.multiplyScalar(-scale);
     }
@@ -113,11 +117,7 @@ const initializeWebXR = (view, options) => {
 
     function bindGripController(controllerModelFactory, gripController) {
         gripController.add(controllerModelFactory.createControllerModel(gripController));
-        // var cameraTargetPosition = view.controls.getCameraCoordinate();
-        // var meshCoord = cameraTargetPosition;
-        // controllerGrip.position.copy(meshCoord.as(view.referenceCrs));
-        // controllerGrip.updateMatrixWorld();
-        applyScalePosition(gripController, scale);
+       // applyScalePosition(gripController, scale);
         view.scene.add(gripController);
     }
 
@@ -131,8 +131,8 @@ const initializeWebXR = (view, options) => {
             case 'tracked-pointer':
                 params.geometry = new THREE.BufferGeometry();
 
-                params.geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -1], 3));
-                params.geometry.setAttribute('color', new THREE.Float32BufferAttribute([0.5, 0.5, 0.5, 0, 0, 0], 3));
+                params.geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -view.camera.camera3D.far], 3));
+                params.geometry.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1], 3));
 
                 params.material = new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending });
                 return new THREE.Line(params.geometry, params.material);
