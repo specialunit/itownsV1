@@ -100,7 +100,7 @@
 
                 contextXR.raycaster.ray.origin.copy(meshCoord.as(view.referenceCrs));
 
-                view.scene.add(contextXR.raycaster);
+                //view.scene.add(contextXR.raycaster);
 
                 contextXR.floor = new itowns.THREE.Mesh(
 					new itowns.THREE.PlaneGeometry( 10000, 10000, 1, 1 ),
@@ -171,7 +171,7 @@
                         const trans = { x: view.camera.initialPosition.x - newCoordIntersectionproj.x, y: view.camera.initialPosition.y - newCoordIntersectionproj.y, z:  view.camera.initialPosition.z - newCoordIntersectionproj.z, w: 1 };
                         const transform = new XRRigidTransform( trans, offsetRotation );
                         const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-                     //   contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
+                        contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
                     }
                 }
             }
@@ -216,6 +216,29 @@
 
                 }
 
+                function renderRayCaster(name, raycaster, color) {
+                    var existingChild;
+                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
+                    if(existingChild) {
+                       // existingChild.position.copy(coordinates);
+                        existingChild.geometry.attributes.position.setXYZ( 0, raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z );
+						existingChild.geometry.attributes.position.setXYZ(1, raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z );
+                        existingChild.updateMatrixWorld();
+                    }
+                    else {
+                        const points = [];
+                        points.push( raycaster.ray.origin );
+                        points.push( raycaster.ray.direction );
+
+                        const line = new itowns.THREE.Line(
+                            new itowns.THREE.BufferGeometry().setFromPoints(points),
+                            new itowns.THREE.LineBasicMaterial({ color: color, vertexColors: true, blending: itowns.THREE.AdditiveBlending }));
+                            line.updateMatrixWorld();
+                            line.name = name;
+                            view.scene.add(line);
+                    }
+                }
+
 
             function render() {
                 contextXR.INTERSECTION = undefined;
@@ -229,6 +252,7 @@
                     const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
+                        renderRayCaster('raycasterLine_Left', contextXR.raycaster, 0xfe7c00);
                     }
                 } else if ( contextXR.controller2.userData.isSelecting === true ) {
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller2.matrixWorld );
@@ -237,6 +261,7 @@
                     const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
+                        renderRayCaster('raycasterLine_right', contextXR.raycaster, 0xfe7c00);
                     }
                 }
 
@@ -252,7 +277,7 @@
                     var coordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord);
                     coordOnTerrain.coord.altitude += 30;
 
-                    showPosition('findMe', intersectionCoord, 0xfeff00, 20000);
+                    showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
                     showPositionLine('findMe2', intersectionCoord, 0xfe0c00, 20000000);
                     // FIXME position on the ground as an unknown delta... find why
                     //
