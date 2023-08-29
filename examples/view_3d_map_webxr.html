@@ -88,15 +88,15 @@
 
             // ------------- webxr interaction ----------------
             view.scene.matrixWorldAutoUpdate = true;
-            addFakeRoom();
+            
             addControllers();
 
             function addFakeRoom() {
                 contextXR.raycaster = new itowns.THREE.Raycaster();
 
-                var cameraTargetPosition = view.controls.getCameraCoordinate();
-                var meshCoord = cameraTargetPosition;
-                meshCoord.altitude += 50;
+                var cameraTargetPosition = view.controls.getCameraCoordinate().clone();
+                var meshCoord =  new itowns.Coordinates(cameraTargetPosition.crs, cameraTargetPosition.x, cameraTargetPosition.y, cameraTargetPosition.z );
+                meshCoord.altitude -= 10050;
 
                 contextXR.raycaster.ray.origin.copy(meshCoord.as(view.referenceCrs));
 
@@ -104,7 +104,7 @@
 
                 contextXR.floor = new itowns.THREE.Mesh(
 					new itowns.THREE.PlaneGeometry( 10000, 10000, 1, 1 ),
-					new itowns.THREE.MeshBasicMaterial( { color: 0xff0000, side: itowns.THREE.DoubleSide } )
+					new itowns.THREE.MeshBasicMaterial( { color: 0x222222, side: itowns.THREE.DoubleSide } )
 				);
                 contextXR.floor.name = "floor";
                 // position and orientation of the mesh
@@ -118,7 +118,7 @@
 
                 meshCoord.altitude += 1;
                 contextXR.marker = new itowns.THREE.Mesh(
-					new itowns.THREE.CircleGeometry( 500, 32 ),
+					new itowns.THREE.CircleGeometry( 50, 32 ),
 					new itowns.THREE.MeshBasicMaterial( { color: 0xbcbcbc, side: itowns.THREE.DoubleSide } )
 				);
                 contextXR.marker.position.copy(meshCoord.as(view.referenceCrs));
@@ -140,6 +140,7 @@
                  {
                     contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
                     console.log('binding referenceSpace');
+                    addFakeRoom();
                  });
 
                 function bindListeners(index) {
@@ -155,20 +156,13 @@
 
                 function onSelectEnd() {
                     this.userData.isSelecting = false;
-					if ( contextXR.INTERSECTION ) {
-                        console.log(contextXR.INTERSECTION);
-
-                        const cameraPos = view.camera.position().clone();
-                        const newCoordIntersectionproj = new itowns.Coordinates(cameraPos.crs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, cameraPos.z);
-
-                        showPosition('intersect', contextXR.INTERSECTION, 0x00ff00);
-                        showPosition('simulated_intersect', newCoordIntersectionproj.as(view.referenceCrs), 0xffffff);
-
-                        var position = view.camera.position();
+					if ( contextXR.coordOnCamera ) {
                         const offsetRotation = new itowns.THREE.Quaternion();
+                        const projectedCoordinate = contextXR.coordOnCamera.coord.as(view.referenceCrs);
+                        showPosition('intersect', projectedCoordinate, 0x0000ff);
 
                        // compute targeted position relative to the origine camera.
-                        const trans = { x: view.camera.initialPosition.x - newCoordIntersectionproj.x, y: view.camera.initialPosition.y - newCoordIntersectionproj.y, z:  view.camera.initialPosition.z - newCoordIntersectionproj.z, w: 1 };
+                        const trans = { x: view.camera.initialPosition.x - projectedCoordinate.x, y: view.camera.initialPosition.y - projectedCoordinate.y, z:  view.camera.initialPosition.z - projectedCoordinate.z, w: 1 };
                         const transform = new XRRigidTransform( trans, offsetRotation );
                         const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
                         contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
@@ -194,7 +188,7 @@
                     }
                 }
 
-                function showPositionLine(name, coordinates, color, upSize) {
+                function showPositionVerticalLine(name, coordinates, color, upSize) {
                     var existingChild;
                     view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
 
@@ -203,15 +197,18 @@
                     }
                     else {
                         const points = [];
-                        points.push( new itowns.THREE.Vector3( 0, 0, 0 ) );
-                        points.push( new itowns.THREE.Vector3( 0, upSize, 0 ) );
+                        points.push(new itowns.THREE.Vector3(0,0,0));
+                        // upward direction
+                        points.push(new itowns.THREE.Vector3(0, 0, -upSize));
 
-                const line = new itowns.THREE.Line(
-                    new itowns.THREE.BufferGeometry().setFromPoints(points),
-                    new itowns.THREE.LineBasicMaterial({ color: color, vertexColors: true, blending: itowns.THREE.AdditiveBlending }));
-                    line.position.copy(coordinates);
-                    line.updateMatrixWorld();
-                    view.scene.add(line);
+                        const line = new itowns.THREE.Line(
+                            new itowns.THREE.BufferGeometry().setFromPoints(points),
+                            new itowns.THREE.LineBasicMaterial({ color: color }));
+                        line.position.copy(coordinates);
+                        //necessary to "look" vertically
+                        line.lookAt(new itowns.THREE.Vector3(0, 0, 1));
+                        line.name = name;
+                        view.scene.add(line);
                     }
 
                 }
@@ -220,28 +217,21 @@
                     var existingChild;
                     view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
                     if(existingChild) {
-                       // existingChild.position.copy(coordinates);
-                        existingChild.geometry.attributes.position.setXYZ( 0, raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z );
-						existingChild.geometry.attributes.position.setXYZ(1, raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z );
-                        existingChild.updateMatrixWorld();
+                        existingChild.setDirection(raycaster.ray.direction);
+                        existingChild.origin = raycaster.ray.origin;
                     }
                     else {
-                        const points = [];
-                        points.push( raycaster.ray.origin );
-                        points.push( raycaster.ray.direction );
 
-                        const line = new itowns.THREE.Line(
-                            new itowns.THREE.BufferGeometry().setFromPoints(points),
-                            new itowns.THREE.LineBasicMaterial({ color: color, vertexColors: true, blending: itowns.THREE.AdditiveBlending }));
-                            line.updateMatrixWorld();
-                            line.name = name;
-                            view.scene.add(line);
+                        const arrow = new itowns.THREE.ArrowHelper(raycaster.ray.direction, raycaster.ray.origin, 10, color);
+                        arrow.name = name;
+                        view.scene.add(arrow);
                     }
                 }
 
 
             function render() {
                 contextXR.INTERSECTION = undefined;
+                contextXR.coordOnCamera = undefined;
                 if ( contextXR.controller1.userData.isSelecting === true ) {
                     let temp = {loc: new itowns.THREE.Vector3(), rot: new itowns.THREE.Quaternion(), scale: new itowns.THREE.Vector3()};
                     // in threejs it is used from matrixWorld
@@ -249,7 +239,7 @@
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller1.matrixWorld );
                     contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller1.matrixWorld );
                     contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
+                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //( [contextXR.floor]); 
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                         renderRayCaster('raycasterLine_Left', contextXR.raycaster, 0xfe7c00);
@@ -258,38 +248,57 @@
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller2.matrixWorld );
                     contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller2.matrixWorld );
                     contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //   [contextXR.floor]
+                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //  ([contextXR.floor]); // 
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                         renderRayCaster('raycasterLine_right', contextXR.raycaster, 0xfe7c00);
                     }
                 }
 
-
-                // position is equals to the controller context,
-                // maybe apply matrix of the object to reverse ?
                 if ( contextXR.INTERSECTION )
                 {
-                    console.log('intersection ', contextXR.INTERSECTION);
 
                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
 
-                    var coordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord);
-                    coordOnTerrain.coord.altitude += 30;
+                    var cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+
+                   var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+
+                    var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
+                    coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
+                    
+                    contextXR.coordOnCamera = coordOnCamera;
+
+                    var cameraFloorIntersect = view.controls.getCameraCoordinate().clone();
+                    // FIXME result is not stricly the camera position as expected, maybe due to the intersection position?
+                    // FIXME getCameraCoordinate doesn't update on webxr camera move, maybe test it in "unbounded" / "bounded" context
+                    var cameraTargetPosition = view.controls.getCameraCoordinate().clone();
+                    /* the staircase effect find explanation in regard of view.camera.camera3D.position z evolution
+                    for some reason, position is highly rounded when not to initial vr pos.
+                    but camera matrices seems like in the same level of definition...
+                    */
+                    console.log('camera position ', view.camera.camera3D.position);
+                    cameraFloorIntersect.altitude = justElevationAt;
 
                     showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
-                    showPositionLine('findMe2', intersectionCoord, 0xfe0c00, 20000000);
+                    showPosition('findMePRECISE', coordOnCamera.coord.as(view.referenceCrs), 0xaffb00, 100);
+                    showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
+                    
+                    showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
                     // FIXME position on the ground as an unknown delta... find why
-                    //
-                    var cameraTargetPosition = view.controls.getCameraCoordinate();
-                    console.log('intersection on ground ', coordOnTerrain.coord.as(view.referenceCrs));
-                    console.log('camera pos', cameraTargetPosition.as(view.referenceCrs));
+                    
 
-                    // DEBUG if you intersect directly based on the fake floor you can just give contextXR.floor as copy position.
+
+                    
+
+                    // showing camera floor intersection
+                    contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
+
+                    
                     view.meshPointer.position.copy(intersectionCoord);
-
-                    contextXR.marker.position.copy(intersectionCoord);
                 }
+
+                console.log('camera position ', view.camera.camera3D.position);
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
             }
 
