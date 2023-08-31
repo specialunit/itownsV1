@@ -135,6 +135,8 @@
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
                  contextXR.controller1 = bindListeners(0);
                  contextXR.controller2 = bindListeners(1);
+                 contextXR.controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
+                 contextXR.controller1.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
@@ -147,6 +149,7 @@
                     const controller = contextXR.renderer.xr.getController(index);
                     controller.addEventListener( 'selectstart', onSelectStart );
                     controller.addEventListener( 'selectend', onSelectEnd );
+                    controller.addEventListener('itowns-xr-button-pressed', onButtonPressed);
                     return controller;
                 }
 
@@ -167,6 +170,34 @@
                         const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
                         contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
                     }
+                }
+
+                function onButtonPressed(data) {
+                   // console.log('received button pressed', data);
+                }
+
+                function onLeftAxisChanged(data) {
+                    if (data.target.name !== 'leftController') {
+                        return;
+                    }
+                    var ctrl = data.message.controller;
+                    // console.log('received axis changed', data, ctrl.lastAxisItem, ctrl.gamepad.axes);
+                    if ( contextXR.INTERSECTION ) {
+                        contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
+                    } else {
+                        // if no teleportation ongoing, just adjust camera elevation
+                        var cameraPosition = view.controls.getCameraCoordinate();
+                        cameraPosition.altitude -= ctrl.gamepad.axes[3] * 100;
+                        view.camera.setPosition(cameraPosition.as(view.referenceCrs));
+                    }
+                } 
+
+                function onRightAxisChanged(data) {
+                    if (data.target.name !== 'rightController') {
+                        return;
+                    }
+
+                    console.log('right axis changed');
                 }
             }
 
@@ -231,7 +262,8 @@
 
             function render() {
                 contextXR.INTERSECTION = undefined;
-                contextXR.coordOnCamera = undefined;
+
+                // test intersection coordinate with terrain
                 if ( contextXR.controller1.userData.isSelecting === true ) {
                     let temp = {loc: new itowns.THREE.Vector3(), rot: new itowns.THREE.Quaternion(), scale: new itowns.THREE.Vector3()};
                     // in threejs it is used from matrixWorld
@@ -259,13 +291,17 @@
                 {
 
                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
-
-                    var cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
-
                    var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
 
                     var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
-                    coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
+                    if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
+                        coordOnCamera.coord.altitude += contextXR.deltaAltitude;
+                    } else {
+                         // by default set altitude to the current camera elevation from terrain
+                         let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+                         coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
+                         contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
+                    }
                     
                     contextXR.coordOnCamera = coordOnCamera;
 
@@ -286,23 +322,18 @@
                     
                     showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
                     // FIXME position on the ground as an unknown delta... find why
-                    
-
-
-                    
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
 
                     
                     view.meshPointer.position.copy(intersectionCoord);
+                } else {
+                    // if no more intersection, reset coords.
+                    contextXR.coordOnCamera = undefined;
                 }
-
-                console.log('camera position ', view.camera.camera3D.position);
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
             }
-
-
 
 
             //---------  add fake to ground

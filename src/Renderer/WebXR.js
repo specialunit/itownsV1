@@ -34,23 +34,28 @@ const initializeWebXR = (view, options) => {
             }
         };
 
-        initControllers(webXRManager);
+        const xrControllers = initControllers(webXRManager);
 
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
         xr.enabled = true;
         xr.getReferenceSpace('local');
+         view.camera.camera3D.position.multiplyScalar(scale);
+         view.camera.camera3D.updateMatrixWorld();
 
         const position = view.camera.position();
         view.camera.initialPosition = position.clone();
         const geodesicNormal = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
 
         const quat = new THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
+        // https://github.com/immersive-web/webxr/issues/1236 for high position value
         const trans = camera.position.clone().multiplyScalar(-scale).applyQuaternion(quat);
         const transform = new XRRigidTransform(trans, quat);
+        // here position seems ok {x: 4485948.637198923, y: 476198.0416370128, z: 4497216.056600053, w: 1}
 
         const baseReferenceSpace = xr.getReferenceSpace();
         const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
+        // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
 
         xr.setReferenceSpace(teleportSpaceOffset);
 
@@ -67,8 +72,13 @@ const initializeWebXR = (view, options) => {
                 if (options.callback) {
                     options.callback();
                 }
+
+                listenGamepad(xrControllers.left);
+                listenGamepad(xrControllers.right);
+
                 view.camera.camera3D.updateMatrix();
                 view.camera.camera3D.updateMatrixWorld(true);
+
                 if (view.scene.matrixWorldAutoUpdate === true) {
                     view.scene.updateMatrixWorld();
                 }
@@ -77,8 +87,48 @@ const initializeWebXR = (view, options) => {
             }
 
             view.mainLoop.step(view, timestamp);
+
         });
     });
+
+    let endGamePadtrackEmit = false;
+
+    /*
+    Listening {XRInputSource} and emit changes for convenience user binding
+    */
+    function listenGamepad(controller) {
+        if (controller.gamepad) {
+            // gamepad.axes = [0, x, y, z];
+            const gamepad = controller.gamepad;
+            if (gamepad.axes.lastItem === 0 && endGamePadtrackEmit) {
+                return;
+            } else {
+                endGamePadtrackEmit = false;
+            }
+            
+            controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
+            controller.lastAxisItem = gamepad.axes.lastItem;
+            controller.lastAxisIndex = gamepad.axes.lastIndex;
+            if (gamepad.axes.lastItem === 0) {
+                endGamePadtrackEmit = true;
+            }
+
+            for (const [index, button] of gamepad.buttons.entries()) {
+                if (button.pressed) {
+                    // 0 - gachette index
+                    // 1 - gachette majeur
+                    // 3 - stick pressed
+                    // 4 - botton button
+                    // 5 - upper button
+                    controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { buttonIndex: index, button } });
+                        controller.lastButtonItem = gamepad.lastItem;
+                }
+                if (button.touched) {
+                    // triggered really often
+                }
+            }
+        }
+    }
 
     function initControllers(webXRManager) {
         const controllerModelFactory = new XRControllerModelFactory();
@@ -95,11 +145,7 @@ const initializeWebXR = (view, options) => {
         bindGripController(controllerModelFactory, leftGripController);
         bindGripController(controllerModelFactory, rightGripController);
         view.scene.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
-    }
-
-    // TODO fix scale world.
-    function applyScalePosition(group3D, scale) {
-        group3D.position.multiplyScalar(-scale);
+        return { left: leftController, right: rightController };
     }
 
     function bindControllerListeners(controller) {
@@ -108,8 +154,8 @@ const initializeWebXR = (view, options) => {
         });
         controller.addEventListener('connected', function addCtrl(event) {
             this.add(buildController(event.data));
-            // applyScalePosition(this, scale);
-            console.log('after binding');
+            // {XRInputSource} event.data
+            controller.gamepad = event.data.gamepad;
         });
         // controller.matrix.makeScale(scale, scale, scale);
         view.scene.add(controller);
@@ -117,7 +163,6 @@ const initializeWebXR = (view, options) => {
 
     function bindGripController(controllerModelFactory, gripController) {
         gripController.add(controllerModelFactory.createControllerModel(gripController));
-       // applyScalePosition(gripController, scale);
         view.scene.add(gripController);
     }
 
