@@ -136,12 +136,13 @@
                  contextXR.controller1 = bindListeners(0);
                  contextXR.controller2 = bindListeners(1);
                  contextXR.controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
-                 contextXR.controller1.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
+                 contextXR.controller2.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
                     contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
                     console.log('binding referenceSpace');
+                    view.scene.children.forEach((child) => {if(child.name === 'xrHeadset') { contextXR.xrHeadSet = child;} });
                     addFakeRoom();
                  });
 
@@ -171,7 +172,7 @@
                         contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
                     }
                 }
-
+ 
                 function onButtonPressed(data) {
                    // console.log('received button pressed', data);
                 }
@@ -181,23 +182,36 @@
                         return;
                     }
                     var ctrl = data.message.controller;
-                    // console.log('received axis changed', data, ctrl.lastAxisItem, ctrl.gamepad.axes);
                     if ( contextXR.INTERSECTION ) {
                         contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
                     } else {
                         // if no teleportation ongoing, just adjust camera elevation
-                        var cameraPosition = view.controls.getCameraCoordinate();
-                        cameraPosition.altitude -= ctrl.gamepad.axes[3] * 100;
-                        view.camera.setPosition(cameraPosition.as(view.referenceCrs));
-                    }
+                        var speed = ctrl.gamepad.axes[3] * 100;
+                        let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+                        if(!cameraCoordOnTerrain) {
+                            console.error('Camera doesn\'t intersect terrain');
+                            return;
+                        }
+                        var direction = cameraCoordOnTerrain.coord.geodesicNormal.clone().multiplyScalar(-speed);
+                        contextXR.xrHeadSet.position.add(direction);
+                    } 
                 } 
 
                 function onRightAxisChanged(data) {
                     if (data.target.name !== 'rightController') {
                         return;
                     }
+                    var ctrl = data.message.controller;
+                    if ( contextXR.INTERSECTION ) {
 
-                    console.log('right axis changed');
+                    } else {
+                        // flying following the camera look at
+                        var speed = ctrl.gamepad.axes[3] * 100;
+                        var matrixHeadset = new itowns.THREE.Matrix4();
+                        matrixHeadset.identity().extractRotation( view.camera.camera3D.matrixWorld );
+                        var direction = new itowns.THREE.Vector3(0,0,1).applyMatrix4(matrixHeadset).multiplyScalar(speed);
+                        contextXR.xrHeadSet.position.add(direction);
+                    }
                 }
             }
 
