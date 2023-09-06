@@ -39,7 +39,8 @@
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
             const contextXR = {
-                tempMatrix: new itowns.THREE.Matrix4()
+                tempMatrix: new itowns.THREE.Matrix4(),
+                coordOnCamera: {}
             };
 
             const scale = 1;
@@ -162,7 +163,7 @@
                     this.userData.isSelecting = false;
 					if ( contextXR.coordOnCamera ) {
                         const offsetRotation = new itowns.THREE.Quaternion();
-                        const projectedCoordinate = contextXR.coordOnCamera.coord.as(view.referenceCrs);
+                        const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
                         showPosition('intersect', projectedCoordinate, 0x0000ff);
 
                        // compute targeted position relative to the origine camera.
@@ -307,6 +308,7 @@
                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
                    var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
 
+                   // not a {itowns.Coordinates} 
                     var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
                     if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
                         coordOnCamera.coord.altitude += contextXR.deltaAltitude;
@@ -317,7 +319,9 @@
                          contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
                     }
                     
-                    contextXR.coordOnCamera = coordOnCamera;
+                    // must clone Coordinate to avoid side effect, maybe with DEMUtils, but not sure.
+                    contextXR.coordOnCamera = new itowns.Coordinates(coordOnCamera.coord.crs);
+                    contextXR.coordOnCamera.setFromVector3(coordOnCamera.coord);
 
                     var cameraFloorIntersect = view.controls.getCameraCoordinate().clone();
                     // FIXME result is not stricly the camera position as expected, maybe due to the intersection position?
@@ -331,7 +335,7 @@
                     cameraFloorIntersect.altitude = justElevationAt;
 
                     showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
-                    showPosition('findMePRECISE', coordOnCamera.coord.as(view.referenceCrs), 0xaffb00, 100);
+                    showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100);
                     showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
                     
                     showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
@@ -390,6 +394,9 @@
 
                addMeshToScene();
             });
+
+            var d = new debug.Debug(view, debugMenu.gui);
+            debug.createTileDebugUI(debugMenu.gui, view, view.tileLayer, d);
 
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
