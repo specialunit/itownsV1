@@ -119,19 +119,23 @@ const initializeWebXR = (view, options) => {
     */
     function listenGamepad(controller) {
         if (controller.gamepad) {
-            // gamepad.axes = [0, x, y, z];
+            // gamepad.axes = [0, 0, x, y];
             const gamepad = controller.gamepad;
-            if (gamepad.axes.lastItem === 0 && endGamePadtrackEmit) {
+            if (controller.isStickActive && gamepad.axes.lastItem === 0 && endGamePadtrackEmit) {
+                controller.dispatchEvent({ type: 'itowns-xr-axes-stop', message: { controller } });
+                controller.isStickActive = false;
                 return;
-            } else {
+            } else if (!controller.isStickActive && gamepad.axes.lastItem !== 0) {
                 endGamePadtrackEmit = false;
-            }
-            
-            controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
-            controller.lastAxisItem = gamepad.axes.lastItem;
-            controller.lastAxisIndex = gamepad.axes.lastIndex;
-            if (gamepad.axes.lastItem === 0) {
+                controller.isStickActive = true;
+            } else if (controller.isStickActive && gamepad.axes.lastItem === 0) {
                 endGamePadtrackEmit = true;
+            }
+
+            if (gamepad.axes.lastItem !== 0) {
+                controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
+                controller.lastAxisItem = gamepad.axes.lastItem;
+                controller.lastAxisIndex = gamepad.axes.lastIndex;
             }
 
             for (const [index, button] of gamepad.buttons.entries()) {

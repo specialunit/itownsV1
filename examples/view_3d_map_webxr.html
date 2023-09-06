@@ -138,6 +138,8 @@
                  contextXR.controller2 = bindListeners(1);
                  contextXR.controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
                  contextXR.controller2.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
+                 contextXR.controller2.addEventListener('itowns-xr-axes-stop', onRightAxisStop);
+                 
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
@@ -162,6 +164,8 @@
                 function onSelectEnd() {
                     this.userData.isSelecting = false;
 					if ( contextXR.coordOnCamera ) {
+                        // TODO for now it keeps delta with a translation, make sure to reset it when teleporting.
+                        // TODO follow the lead of having the camera inside the xrHeadSet to track delta of continuous movements.
                         const offsetRotation = new itowns.THREE.Quaternion();
                         const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
                         showPosition('intersect', projectedCoordinate, 0x0000ff);
@@ -206,13 +210,23 @@
                     if ( contextXR.INTERSECTION ) {
 
                     } else {
-                        // flying following the camera look at
+                        if (!data.message.controller.flyDirectionMatrix) {
+                            // locking camera look at
+                            var matrixHeadset = new itowns.THREE.Matrix4();
+                            matrixHeadset.identity().extractRotation( view.camera.camera3D.matrixWorld );
+                            data.message.controller.flyDirectionMatrix = matrixHeadset;
+                        }
+
+                        // flying following the locked camera look at
                         var speed = ctrl.gamepad.axes[3] * 100;
-                        var matrixHeadset = new itowns.THREE.Matrix4();
-                        matrixHeadset.identity().extractRotation( view.camera.camera3D.matrixWorld );
-                        var direction = new itowns.THREE.Vector3(0,0,1).applyMatrix4(matrixHeadset).multiplyScalar(speed);
+                        
+                        var direction = new itowns.THREE.Vector3(0,0,1).applyMatrix4(data.message.controller.flyDirectionMatrix).multiplyScalar(speed);
                         contextXR.xrHeadSet.position.add(direction);
                     }
+                }
+
+                function onRightAxisStop(data) {
+                    data.message.controller.flyDirectionMatrix = undefined;
                 }
             }
 
