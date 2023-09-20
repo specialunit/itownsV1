@@ -47,8 +47,6 @@ const initializeWebXR = (view, options) => {
 
         // avoid precision issues for controllers + allows continuous camera movements
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
-        view.camera.initialPosition = view.camera.position().clone();
-        const cameraOrientation = view.controls.getCameraOrientation();
 
         const itownsDefaultView = { loc: new THREE.Vector3(), rot: new THREE.Quaternion(), scale: new THREE.Vector3() };
         view.controls.camera.matrix.decompose(itownsDefaultView.loc, itownsDefaultView.rot, itownsDefaultView.scale);
@@ -69,12 +67,12 @@ const initializeWebXR = (view, options) => {
         const trans = camera.position.clone().multiplyScalar(-scale).applyQuaternion(quat);
         const transform = new XRRigidTransform(trans, quat);
         // here position seems ok {x: 4485948.637198923, y: 476198.0416370128, z: 4497216.056600053, w: 1}
-
         const baseReferenceSpace = xr.getReferenceSpace();
         const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
         // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
 
-        xr.setReferenceSpace(teleportSpaceOffset);
+        // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
+        setTimeout(() => xr.setReferenceSpace(teleportSpaceOffset));
         view.notifyChange();
 
         view.camera.camera3D = xr.getCamera();
