@@ -249,13 +249,19 @@
                         ctrl.flyDirectionMatrix = matrixHeadset;
                     }
 
-                    // flying following the locked camera look at
-                    // TODO itowns.camera.adjustAltitudeToAvoidCollisionWithLayer() to avoid collision
-                    var speed = ctrl.gamepad.axes[3] * 100;
-                    
-                    var direction = new itowns.THREE.Vector3(0,0,1).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
-                    contextXR.xrHeadSet.position.add(direction);
-                    //TODO add lateral movement
+                    if (ctrl.gamepad.axes[3] !== 0) {
+                        // flying following the locked camera look at
+                        // TODO itowns.camera.adjustAltitudeToAvoidCollisionWithLayer() to avoid collision
+                        var speed = ctrl.gamepad.axes[3] * 100;
+                        
+                        var direction = new itowns.THREE.Vector3(0,0,1).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
+                        contextXR.xrHeadSet.position.add(direction);
+                    } else if (ctrl.gamepad.axes[2] !== 0) {
+                        var speed = ctrl.gamepad.axes[2] * 100;
+                        
+                        var direction = new itowns.THREE.Vector3(1,0,0).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
+                        contextXR.xrHeadSet.position.add(direction);
+                    }
                 }
 
                 function onRightAxisStop(data) {

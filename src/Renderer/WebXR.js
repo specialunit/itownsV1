@@ -44,7 +44,6 @@ const initializeWebXR = (view, options) => {
 
         const xrControllers = initControllers(webXRManager, vrHeadSet);
         
-
         // avoid precision issues for controllers + allows continuous camera movements
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
 
@@ -110,8 +109,6 @@ const initializeWebXR = (view, options) => {
         });
     });
 
-    let endGamePadtrackEmit = false;
-
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
     */
@@ -119,21 +116,20 @@ const initializeWebXR = (view, options) => {
         if (controller.gamepad) {
             // gamepad.axes = [0, 0, x, y];
             const gamepad = controller.gamepad;
-            if (controller.isStickActive && gamepad.axes.lastItem === 0 && endGamePadtrackEmit) {
+            const activeValue = gamepad.axes.find(value => value !== 0);
+            if (controller.isStickActive && !activeValue && controller.gamepad.endGamePadtrackEmit) {
                 controller.dispatchEvent({ type: 'itowns-xr-axes-stop', message: { controller } });
                 controller.isStickActive = false;
                 return;
-            } else if (!controller.isStickActive && gamepad.axes.lastItem !== 0) {
-                endGamePadtrackEmit = false;
+            } else if (!controller.isStickActive && activeValue) {
+                controller.gamepad.endGamePadtrackEmit = false;
                 controller.isStickActive = true;
-            } else if (controller.isStickActive && gamepad.axes.lastItem === 0) {
-                endGamePadtrackEmit = true;
+            } else if (controller.isStickActive && !activeValue) {
+                controller.gamepad.endGamePadtrackEmit = true;
             }
 
-            if (gamepad.axes.lastItem !== 0) {
+            if (activeValue) {
                 controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
-                controller.lastAxisItem = gamepad.axes.lastItem;
-                controller.lastAxisIndex = gamepad.axes.lastIndex;
             }
 
             for (const [index, button] of gamepad.buttons.entries()) {
@@ -179,6 +175,7 @@ const initializeWebXR = (view, options) => {
             this.add(buildController(event.data));
             // {XRInputSource} event.data
             controller.gamepad = event.data.gamepad;
+            // controller.inputSource = event.data;
         });
         vrHeadSet.add(controller);
     }
