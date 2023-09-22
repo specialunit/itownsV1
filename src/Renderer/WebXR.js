@@ -139,9 +139,13 @@ const initializeWebXR = (view, options) => {
                     // 3 - stick pressed
                     // 4 - botton button
                     // 5 - upper button
-                    controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { buttonIndex: index, button } });
-                        controller.lastButtonItem = gamepad.lastItem;
+                    controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
+                    controller.lastButtonItem = button;
+                } else if (controller.lastButtonItem === button && controller.lastButtonItem) {
+                    controller.dispatchEvent({ type: 'itowns-xr-button-released', message: { controller, buttonIndex: index, button } });
+                    controller.lastButtonItem = undefined;
                 }
+
                 if (button.touched) {
                     // triggered really often
                 }
@@ -176,6 +180,14 @@ const initializeWebXR = (view, options) => {
             // {XRInputSource} event.data
             controller.gamepad = event.data.gamepad;
             // controller.inputSource = event.data;
+        });
+        controller.addEventListener('itowns-xr-button-released', (event) => {
+            const ctrl = event.message.controller;
+            ctrl.lockButtonIndex = undefined;
+        });
+        controller.addEventListener('itowns-xr-button-pressed', (event) => {
+            const ctrl = event.message.controller;
+            ctrl.lockButtonIndex = event.message.buttonIndex;
         });
         vrHeadSet.add(controller);
     }

@@ -144,6 +144,7 @@
                  contextXR.controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
                  contextXR.controller2.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
                  contextXR.controller2.addEventListener('itowns-xr-axes-stop', onRightAxisStop);
+                 contextXR.controller2.addEventListener('itowns-xr-button-pressed', onRightButtonPressed);
                  
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
@@ -157,7 +158,6 @@
                     const controller = contextXR.renderer.xr.getController(index);
                     controller.addEventListener( 'selectstart', onSelectStart );
                     controller.addEventListener( 'selectend', onSelectEnd );
-                    controller.addEventListener('itowns-xr-button-pressed', onButtonPressed);
                     return controller;
                 }
 
@@ -171,6 +171,9 @@
                         const offsetRotation = getGeodesicalQuaternion();
                         const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
                         showPosition('intersect', projectedCoordinate, 0x0000ff);
+                        // reset continuous translation applied to headSet parent.
+                        contextXR.xrHeadSet.position.copy(new itowns.THREE.Vector3());
+
 
                        // compute targeted position relative to the origine camera.
                         const trans = new itowns.THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, projectedCoordinate.z).multiplyScalar(-1).applyQuaternion(offsetRotation); // TODO apply quat to
@@ -180,8 +183,15 @@
                     }
                 }
  
-                function onButtonPressed(data) {
-                   // console.log('received button pressed', data);
+                function onRightButtonPressed(data) {
+                    if (data.target.name !== 'rightController') {
+                        return;
+                    }
+                    var ctrl = data.message.controller;
+                    if (data.message.buttonIndex === 1) {
+                        // activate vertical adjustment
+                        udpateCameraElevationLive(ctrl);
+                    }
                 }
 
                 // rotation controls
@@ -194,7 +204,6 @@
                         
                     } else {
                         applyRotation(ctrl);
-                        // udpateCameraElevationLive(ctrl);
                     } 
                 }
 
@@ -214,16 +223,13 @@
 					contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
                 }
 
-                // TODO use it bound to right controller some way
                 function udpateCameraElevationLive(ctrl) {
-                    // if no teleportation ongoing, just adjust camera elevation
-                    var speed = ctrl.gamepad.axes[3] * 100;
-                    let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
-                    if(!cameraCoordOnTerrain) {
-                        console.error('Camera doesn\'t intersect terrain');
+                    if(ctrl.gamepad.axes[3] === 0) {
                         return;
                     }
-                    var direction = cameraCoordOnTerrain.coord.geodesicNormal.clone().multiplyScalar(-speed);
+                    var speed = ctrl.gamepad.axes[3] * 100;
+                    var direction = view.controls.getCameraCoordinate().geodesicNormal.clone();
+                    direction.multiplyScalar(-speed);
                     contextXR.xrHeadSet.position.add(direction);
                 }
 
@@ -233,6 +239,9 @@
                         return;
                     }
                     var ctrl = data.message.controller;
+                    if (ctrl.lockButtonIndex) {
+                        return;
+                    }
                     if ( contextXR.INTERSECTION ) {
                         //updating elevation at intersection destination
                         contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
@@ -315,20 +324,19 @@
 
                 }
 
-                function renderRayCaster(name, raycaster, color) {
-                    var existingChild;
-                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
-                    if(existingChild) {
-                        existingChild.setDirection(raycaster.ray.direction);
-                        existingChild.origin = raycaster.ray.origin;
-                    }
-                    else {
-
-                        const arrow = new itowns.THREE.ArrowHelper(raycaster.ray.direction, raycaster.ray.origin, 10, color);
-                        arrow.name = name;
-                        view.scene.add(arrow);
-                    }
+            function renderdirectionArrow(name, originVector3, directionVector3, scale, color) {
+                var existingChild;
+                view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
+                if(existingChild) {
+                    existingChild.setDirection(directionVector3);
+                    existingChild.origin = originVector3;
                 }
+                else {
+                    const arrow = new itowns.THREE.ArrowHelper(directionVector3, originVector3, scale, color);
+                    arrow.name = name;
+                    view.scene.add(arrow);
+                }   
+            }
 
 
             function render() {
@@ -345,7 +353,7 @@
                     const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //( [contextXR.floor]); 
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
-                        renderRayCaster('raycasterLine_Left', contextXR.raycaster, 0xfe7c00);
+                        renderdirectionArrow('raycasterLine_Left', contextXR.raycaster.ray.origin, contextXR.raycaster.ray.direction, 10, 0xfe7c00);
                     }
                 } else if ( contextXR.controller2.userData.isSelecting === true ) {
                     contextXR.tempMatrix.identity().extractRotation( contextXR.controller2.matrixWorld );
@@ -354,7 +362,7 @@
                     const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //  ([contextXR.floor]); // 
                     if ( intersects.length > 0 ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
-                        renderRayCaster('raycasterLine_right', contextXR.raycaster, 0xfe7c00);
+                        renderdirectionArrow('raycasterLine_right', contextXR.raycaster.ray.origin, contextXR.raycaster.ray.direction, 10, 0xfe7c00);
                     }
                 }
 
