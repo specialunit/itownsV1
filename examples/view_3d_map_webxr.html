@@ -41,7 +41,8 @@
             const contextXR = {
                 tempMatrix: new itowns.THREE.Matrix4(),
                 coordOnCamera: {},
-                deltaRotation: 0
+                deltaRotation: 0,
+                interactiveLayers : []
             };
 
             const scale = 1;
@@ -95,7 +96,7 @@
 
             function getGeodesicalQuaternion() {
                 //TODO can be optimized with better cache
-                const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
+                const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
                 const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
                 return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
             }
@@ -135,6 +136,55 @@
 
                 view.notifyChange();
             }
+
+            function loadBuildingGltf() {
+                                // Load a glTF resource
+                                itowns.glTFLoader.load(
+                // resource URL, do not commit as is.
+                "myGLB.glb",
+
+                
+                // called when the resource is loaded
+                (gltf) => {
+                    gltf.scene.position.copy(new itowns.THREE.Vector3(4486191.121470811, 477820.22721133975, 4495989.354518597));
+                    
+                    gltf.scene.lookAt(new itowns.THREE.Vector3(0, 0, 0));
+                    gltf.scene.rotateX(Math.PI / 2);
+                    gltf.scene.rotateX(Math.PI);
+
+                    // update coordinate of the mesh
+                    gltf.scene.updateMatrixWorld();
+                    const gltfBbox = new itowns.THREE.Box3();
+                    gltfBbox.setFromObject(gltf.scene);
+                    
+                    view.scene.add(gltf.scene);
+                    const helper = new itowns.THREE.Box3Helper( gltfBbox, 0xffff00 );
+                    helper.name="bboxGltfHelper";
+                    helper.visible = false;
+                    view.scene.add(helper);
+                    var gltfBox = generateVRBox(gltf.scene);
+                    applyGltfBoxToCHilds(gltf.scene, gltfBox);
+                    contextXR.interactiveLayers.push(gltf.scene);
+                    gltf.VRBbox = helper;
+                    view.notifyChange();
+                },
+                // called while loading is progressing
+                () => {},
+                // called when loading has errors
+                (error) => {
+                    // eslint-disable-next-line no-console
+                    console.log("An error happened :");
+                    // eslint-disable-next-line no-console
+                    console.log(error);
+                });
+
+                function applyGltfBoxToCHilds(gltfScene, gltfBox) {
+                    gltfScene.traverse(o => {
+                        o.VRBbox = gltfBox;
+                    });
+                }
+            }
+                
 
             function addControllers() {
 
@@ -338,39 +388,79 @@
                 }   
             }
 
+            function updateBboxVisibility(object) {
+                if(contextXR.visibleBbox === object){
+                    return;
+                }
+                // proper to box3Helper
+                if(object.box) { 
+                    if (!object.visible) {
+                        console.log('im still using this?');
+                        resetPreviousVisibleeBbox();
+                        contextXR.visibleBbox = object;
+                        object.visible = true;
+                    }
+                }
+                else if(object.geometry) {
+                    if(!object.VRBbox) {
+                        generateVRBox(object);
+                    }
+                    if (!object.VRBbox.visible) {
+                        resetPreviousVisibleeBbox();
+                        contextXR.visibleBbox = object.VRBbox;
+                        object.VRBbox.visible = true;
+                    }
+                } else if(contextXR.visibleBbox) {
+                    resetPreviousVisibleeBbox();
+                }
+
+                function resetPreviousVisibleeBbox() {
+                    if(contextXR.visibleBbox) {
+                        contextXR.visibleBbox.visible = false;
+                        contextXR.visibleBbox = undefined;
+                    }
+                }
+            }
+
+            function generateVRBox(object) {
+                const objectBbox = new itowns.THREE.Box3();
+                // better than object.geometry.computeBoundingBox(); as it copy parent position.
+                objectBbox.setFromObject(object);
+                object.VRBbox = objectBbox;
+                object.VRBbox = new itowns.THREE.Box3Helper(object.VRBbox, 0xffff00);
+
+                object.VRBbox.name = object.name +'_VRBbox';
+                view.scene.add(object.VRBbox);
+                object.VRBbox.visible = false;
+                return object.VRBbox;
+            }
+        
+            function intersectInteractiveLayers() {
+                // test intersection coordinate with terrain
+                contextXR.tempMatrix.identity().extractRotation(contextXR.controller2.matrixWorld);
+                contextXR.raycaster.ray.origin.setFromMatrixPosition(contextXR.controller2.matrixWorld);
+                contextXR.raycaster.ray.direction.set(0, 0, -1).applyMatrix4( contextXR.tempMatrix);
+                return contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
+            }
 
             function render() {
                 contextXR.INTERSECTION = undefined;
-
-                // test intersection coordinate with terrain
-                if ( contextXR.controller1.userData.isSelecting === true ) {
-                    let temp = {loc: new itowns.THREE.Vector3(), rot: new itowns.THREE.Quaternion(), scale: new itowns.THREE.Vector3()};
-                    // in threejs it is used from matrixWorld
-                    contextXR.controller1.matrixWorld.decompose(temp.loc,temp.rot,temp.scale);
-                    contextXR.tempMatrix.identity().extractRotation( contextXR.controller1.matrixWorld );
-                    contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller1.matrixWorld );
-                    contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //( [contextXR.floor]); 
-                    if ( intersects.length > 0 ) {
+                const intersects = intersectInteractiveLayers(); 
+                if ( intersects.length > 0 ) {
+                    updateBboxVisibility(intersects[0].object);
+                    if ( contextXR.controller2.userData.isSelecting === true ) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
-                        renderdirectionArrow('raycasterLine_Left', contextXR.raycaster.ray.origin, contextXR.raycaster.ray.direction, 10, 0xfe7c00);
                     }
-                } else if ( contextXR.controller2.userData.isSelecting === true ) {
-                    contextXR.tempMatrix.identity().extractRotation( contextXR.controller2.matrixWorld );
-                    contextXR.raycaster.ray.origin.setFromMatrixPosition( contextXR.controller2.matrixWorld );
-                    contextXR.raycaster.ray.direction.set( 0, 0, - 1 ).applyMatrix4( contextXR.tempMatrix );
-                    const intersects = contextXR.raycaster.intersectObjects(view.tileLayer.level0Nodes); //  ([contextXR.floor]); // 
-                    if ( intersects.length > 0 ) {
-                        contextXR.INTERSECTION = intersects[ 0 ].point;
-                        renderdirectionArrow('raycasterLine_right', contextXR.raycaster.ray.origin, contextXR.raycaster.ray.direction, 10, 0xfe7c00);
-                    }
+                } else if (contextXR.visibleBbox) {
+                    contextXR.visibleBbox.visible = false;
+                    contextXR.visibleBbox = undefined;
                 }
 
                 if ( contextXR.INTERSECTION )
                 {
 
                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
-                   var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+                   var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
 
                    // not a {itowns.Coordinates} 
                     var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
@@ -378,7 +468,7 @@
                         coordOnCamera.coord.altitude += contextXR.deltaAltitude;
                     } else {
                          // by default set altitude to the current camera elevation from terrain
-                         let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate(), itowns.DEMUtils.PRECISE_READ_Z);
+                         let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
                          coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
                          contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
                     }
@@ -395,7 +485,6 @@
                     for some reason, position is highly rounded when not to initial vr pos.
                     but camera matrices seems like in the same level of definition...
                     */
-                    console.log('camera position ', view.camera.camera3D.position);
                     cameraFloorIntersect.altitude = justElevationAt;
 
                     showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
@@ -431,7 +520,7 @@
                 var cameraTargetPosition = view.controls.getLookAtCoordinate();
 
                 // position of the mesh
-                var meshCoord = cameraTargetPosition;
+                var meshCoord = cameraTargetPosition.clone();
                 meshCoord.altitude += 30;
 
                 // position and orientation of the mesh
