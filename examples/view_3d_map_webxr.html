@@ -385,7 +385,7 @@
                 view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
                 if(existingChild) {
                     existingChild.setDirection(directionVector3);
-                    existingChild.origin = originVector3;
+                    existingChild.position.copy(originVector3);
                 }
                 else {
                     const arrow = new itowns.THREE.ArrowHelper(directionVector3, originVector3, scale, color);
