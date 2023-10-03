@@ -21,6 +21,14 @@
 
         <!-- Import iTowns source code -->
         <script src="../dist/itowns.js"></script>
+        <script src="../dist/debug.js"></script>
+        <!-- Import iTowns Widgets plugin -->
+        <script src="../dist/itowns_widgets.js"></script>
+        <!-- Import iTowns LoadingScreen and GuiTools plugins -->
+        <script src="js/GUI/GuiTools.js"></script>
+        <script src="js/GUI/LoadingScreen.js"></script>
+        <script src="js/XR/Controllers.js"></script>
+        <script src="js/XR/Utils.js"></script>
 
         <script type="module">
 
@@ -92,14 +100,7 @@
             // ------------- webxr interaction ----------------
             view.scene.matrixWorldAutoUpdate = true;
             
-            addControllers();
-
-            function getGeodesicalQuaternion() {
-                //TODO can be optimized with better cache
-                const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
-                const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
-                return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
-            }
+            initXR();
 
             function addFakeRoom() {
                 contextXR.raycaster = new itowns.THREE.Raycaster();
@@ -186,222 +187,36 @@
             }
                 
 
-            function addControllers() {
-
+            function initXR() {
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
-                 contextXR.controller1 = bindListeners(0);
-                 contextXR.controller2 = bindListeners(1);
-                 contextXR.controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
-                 contextXR.controller2.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
-                 contextXR.controller2.addEventListener('itowns-xr-axes-stop', onRightAxisStop);
-                 contextXR.controller2.addEventListener('itowns-xr-button-pressed', onRightButtonPressed);
-                 
+                Controllers.addControllers(contextXR);
 
+                addFakeRoom();
+                
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
                     contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
                     view.scene.children.forEach((child) => {if(child.name === 'xrHeadset') { contextXR.xrHeadSet = child;} });
-                    addFakeRoom();
+                    
+                    var testPicking = XRUtils.showPosition('testPicking', new itowns.THREE.Vector3(4486512.584368641, 476258.50340769894, 4497781.931009745), 0xf9429e, 25);
+                    // contextXR.interactiveLayers.push(testPicking);
+                    var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25);
+                    generateVRBox(testPickingBbox);
+                    // contextXR.interactiveLayers.push(testPickingBbox);
+                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes);
+
+                   // const orbitControls = new itowns.THREE.OrbitControls( view.controls.camera, contextXR.renderer.domElement );
+                   // orbitControls.target = gltf.centor vector
                  });
-
-                function bindListeners(index) {
-                    const controller = contextXR.renderer.xr.getController(index);
-                    controller.addEventListener( 'selectstart', onSelectStart );
-                    controller.addEventListener( 'selectend', onSelectEnd );
-                    return controller;
-                }
-
-                function onSelectStart() {
-                    this.userData.isSelecting = true;
-                }
-
-                function onSelectEnd() {
-                    this.userData.isSelecting = false;
-					if ( contextXR.coordOnCamera ) {
-                        const offsetRotation = getGeodesicalQuaternion();
-                        const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
-                        showPosition('intersect', projectedCoordinate, 0x0000ff);
-                        // reset continuous translation applied to headSet parent.
-                        contextXR.xrHeadSet.position.copy(new itowns.THREE.Vector3());
-
-
-                       // compute targeted position relative to the origine camera.
-                        const trans = new itowns.THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, projectedCoordinate.z).multiplyScalar(-1).applyQuaternion(offsetRotation); // TODO apply quat to
-                        const transform = new XRRigidTransform( trans, offsetRotation );
-                        const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-                        contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
-                    }
-                }
- 
-                function onRightButtonPressed(data) {
-                    if (data.target.name !== 'rightController') {
-                        return;
-                    }
-                    var ctrl = data.message.controller;
-                    if (data.message.buttonIndex === 1) {
-                        // activate vertical adjustment
-                        udpateCameraElevationLive(ctrl);
-                    }
-                }
-
-                // rotation controls
-                function onLeftAxisChanged(data) {
-                    if (data.target.name !== 'leftController') {
-                        return;
-                    }
-                    var ctrl = data.message.controller;
-                    if ( contextXR.INTERSECTION ) {
-                        
-                    } else {
-                        applyRotation(ctrl);
-                    } 
-                }
-
-                
-                function applyRotation(ctrl) {
-                    if(ctrl.gamepad.axes[2] === 0) {
-                        return;
-                    }
-                    contextXR.deltaRotation += Math.PI / (160 * ctrl.gamepad.axes[2]);
-                    const offsetRotation = getGeodesicalQuaternion();
-					var thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationY(contextXR.deltaRotation);
-                    var rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
-                    offsetRotation.premultiply(rotationQuartenion);
-                    const trans = view.camera.camera3D.position.clone().multiplyScalar(-1).applyQuaternion(offsetRotation);
-					const transform = new XRRigidTransform( trans, offsetRotation );
-					const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-					contextXR.renderer.xr.setReferenceSpace( teleportSpaceOffset );
-                }
-
-                function udpateCameraElevationLive(ctrl) {
-                    if(ctrl.gamepad.axes[3] === 0) {
-                        return;
-                    }
-                    var speed = ctrl.gamepad.axes[3] * 100;
-                    var direction = view.controls.getCameraCoordinate().geodesicNormal.clone();
-                    direction.multiplyScalar(-speed);
-                    contextXR.xrHeadSet.position.add(direction);
-                }
-
-                // translation controls
-                function onRightAxisChanged(data) {
-                    if (data.target.name !== 'rightController') {
-                        return;
-                    }
-                    var ctrl = data.message.controller;
-                    if (ctrl.lockButtonIndex) {
-                        return;
-                    }
-                    if ( contextXR.INTERSECTION ) {
-                        //updating elevation at intersection destination
-                        contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
-                    } else {
-                        cameraOnFly(ctrl);
-                    }
-                }
-
-                function cameraOnFly(ctrl) {
-                    if (!ctrl.flyDirectionMatrix) {
-                        // locking camera look at
-                        var matrixHeadset = new itowns.THREE.Matrix4();
-                        matrixHeadset.identity().extractRotation( view.camera.camera3D.matrixWorld );
-                        ctrl.flyDirectionMatrix = matrixHeadset;
-                    }
-                    if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
-                        return;
-                    }
-                    var directionX = new itowns.THREE.Vector3();
-                    var directionY = new itowns.THREE.Vector3();
-
-                    if (ctrl.gamepad.axes[3] !== 0) {
-                        // flying following the locked camera look at
-                        // TODO itowns.camera.adjustAltitudeToAvoidCollisionWithLayer() to avoid collision
-                        var speed = ctrl.gamepad.axes[3] * 100;
-                        
-                        directionY = new itowns.THREE.Vector3(0,0,1).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
-                    } 
-                    if (ctrl.gamepad.axes[2] !== 0) {
-                        var speed = ctrl.gamepad.axes[2] * 100;
-                        
-                        directionX = new itowns.THREE.Vector3(1,0,0).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
-                        
-                    }
-                    contextXR.xrHeadSet.position.add(directionX.add(directionY));
-                }
-
-                function onRightAxisStop(data) {
-                    // camera fly reset
-                    data.message.controller.flyDirectionMatrix = undefined;
-                }
-            }
-
-            function showPosition(name, coordinates, color, radius = 50) {
-                var existingChild;
-                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
-
-                    if(existingChild) {
-                        existingChild.position.copy(coordinates);
-                    }
-                    else {
-                        const previousPos = new itowns.THREE.Mesh(
-					        new itowns.THREE.SphereGeometry( radius, 16, 8 ),
-					        new itowns.THREE.MeshBasicMaterial( { color: color, wireframe: true } )
-				        );
-                        previousPos.name = name;
-                        previousPos.position.copy(coordinates);
-                        view.scene.add(previousPos);
-                        existingChild = previousPos;
-                    }
-                    return existingChild;
-                }
-
-                function showPositionVerticalLine(name, coordinates, color, upSize) {
-                    var existingChild;
-                    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
-
-                    if(existingChild) {
-                        existingChild.position.copy(coordinates);
-                    }
-                    else {
-                        const points = [];
-                        points.push(new itowns.THREE.Vector3(0,0,0));
-                        // upward direction
-                        points.push(new itowns.THREE.Vector3(0, 0, -upSize));
-
-                        const line = new itowns.THREE.Line(
-                            new itowns.THREE.BufferGeometry().setFromPoints(points),
-                            new itowns.THREE.LineBasicMaterial({ color: color }));
-                        line.position.copy(coordinates);
-                        //necessary to "look" vertically
-                        line.lookAt(new itowns.THREE.Vector3(0, 0, 1));
-                        line.name = name;
-                        view.scene.add(line);
-                    }
-
-                }
-
-            function renderdirectionArrow(name, originVector3, directionVector3, scale, color) {
-                var existingChild;
-                view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
-                if(existingChild) {
-                    existingChild.setDirection(directionVector3);
-                    existingChild.position.copy(originVector3);
-                }
-                else {
-                    const arrow = new itowns.THREE.ArrowHelper(directionVector3, originVector3, scale, color);
-                    arrow.name = name;
-                    view.scene.add(arrow);
-                }   
             }
 
             function updateBboxVisibility(object) {
-                if(contextXR.visibleBbox === object){
+                if(contextXR.visibleBbox && contextXR.visibleBbox === object.VRBbox){
                     return;
                 }
                 // proper to box3Helper
                 if(object.box) { 
                     if (!object.visible) {
-                        console.log('im still using this?');
                         resetPreviousVisibleeBbox();
                         contextXR.visibleBbox = object;
                         object.visible = true;
@@ -493,11 +308,11 @@
                     */
                     cameraFloorIntersect.altitude = justElevationAt;
 
-                    showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
-                    showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100);
-                    showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
+                    XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
+                    XRUtils.showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100);
+                    XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
                     
-                    showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
+                    XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
                     // FIXME position on the ground as an unknown delta... find why
 
                     // showing camera floor intersection
