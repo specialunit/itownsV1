@@ -20,6 +20,32 @@ XRUtils.showPosition = function(name, coordinates, color, radius = 50) {
     return existingChild;
 }
 
+/**
+ * 
+ * @param {String} name 
+ * @param {Vector3} coordinates 
+ * @param {String} color hexa color
+ */
+XRUtils.addPositionPoints = function(name, coordinates, color) {
+    var existingChild;
+    view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });
+    if(existingChild) {
+        var verticesUpdated = existingChild.geometry.attributes.position.array.values().toArray();
+        verticesUpdated.push(coordinates.x, coordinates.y, coordinates.z);
+        existingChild.geometry.setAttribute( 'position', new itowns.THREE.Float32BufferAttribute(verticesUpdated, 3));
+    }
+    else {
+        const geometry = new itowns.THREE.BufferGeometry();
+        const vertices = [];
+        vertices.push(coordinates.x, coordinates.y, coordinates.z);
+        const material = new itowns.THREE.PointsMaterial({ size: 2, color: color });
+        geometry.setAttribute( 'position', new itowns.THREE.Float32BufferAttribute(vertices, 3));
+        var particle = new itowns.THREE.Points( geometry, material );
+        particle.name = name;
+        view.scene.add(particle);
+    }
+}
+
 XRUtils.showPositionVerticalLine = function(name, coordinates, color, upSize) {
     var existingChild;
     view.scene.children.forEach((child) => {if(child.name === name) { existingChild = child;} });

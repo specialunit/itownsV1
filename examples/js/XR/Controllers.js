@@ -3,10 +3,18 @@ const Controllers = {};
 
 var renderer;
 
+// move clipped to a fixed altitude
+var clipToground = false;
+
+const minDeltaAltitude = 1.8;
+
+// TODO cache geodesicQuat
+
+/**
+ * requires a contextXR variable.
+ */
 Controllers.addControllers = function() {
     renderer = view.mainLoop.gfxEngine.renderer;
-    
-    console.log('coucou');
     var controller1 = bindListeners(0);
     var controller2 = bindListeners(1);
     controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
@@ -17,11 +25,18 @@ Controllers.addControllers = function() {
 
     var cameraRightCtrl = new itowns.THREE.PerspectiveCamera(view.camera.camera3D.fov);
     cameraRightCtrl.position.copy(view.camera.camera3D.position);
-    var cameraRighthelper = new itowns.THREE.CameraHelper( cameraRightCtrl );
+    var cameraRighthelper = new itowns.THREE.CameraHelper(cameraRightCtrl);
     view.scene.add(cameraRighthelper);
     contextXR.cameraRightGrp = { camera : cameraRightCtrl, cameraHelper : cameraRighthelper };
     contextXR.controller1 = controller1;
     contextXR.controller2 = controller2;
+}
+
+Controllers.getGeodesicalQuaternion = function() {
+    //TODO can be optimized with better cache
+    const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
+    const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
+    return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
 }
 
 function bindListeners(index) {
@@ -31,6 +46,26 @@ function bindListeners(index) {
     return controller;
 }
 
+function applyTransformationToXR(trans, offsetRotation) {
+    const transCoordinate = new itowns.Coordinates(view.referenceCrs, trans.x, trans.y, trans.z);
+    const terrainElevation = itowns.DEMUtils.getElevationValueAt(view.tileLayer, transCoordinate, itowns.DEMUtils.PRECISE_READ_Z);
+    if(!terrainElevation) {
+        console.error('no elevation intersection possible');
+        return;
+    }
+    const coordsProjected = transCoordinate.as(view.controls.getCameraCoordinate().crs);
+    if (clipToground || (coordsProjected.altitude - terrainElevation) - minDeltaAltitude <= 0) {
+        clipToground = true;
+        coordsProjected.altitude = terrainElevation + minDeltaAltitude;
+    }
+    trans = coordsProjected.as(view.referenceCrs).toVector3();
+
+    trans = trans.multiplyScalar(-1).applyQuaternion(offsetRotation);
+    const transform = new XRRigidTransform(trans, offsetRotation);
+    const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
+    renderer.xr.setReferenceSpace(teleportSpaceOffset);
+}
+
 function onSelectStart() {
     this.userData.isSelecting = true;
 }
@@ -38,28 +73,17 @@ function onSelectStart() {
 function onSelectEnd() {
     this.userData.isSelecting = false;
     if ( contextXR.coordOnCamera ) {
-        const offsetRotation = getGeodesicalQuaternion();
+        const offsetRotation = Controllers.getGeodesicalQuaternion();
         const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
         XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff);
         // reset continuous translation applied to headSet parent.
         contextXR.xrHeadSet.position.copy(new itowns.THREE.Vector3());
 
        // compute targeted position relative to the origine camera.
-        const trans = new itowns.THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, projectedCoordinate.z).multiplyScalar(-1).applyQuaternion(offsetRotation);
-        const transform = new XRRigidTransform( trans, offsetRotation );
-        const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-        renderer.xr.setReferenceSpace( teleportSpaceOffset );
+        const trans = new itowns.THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, projectedCoordinate.z);
+        applyTransformationToXR(trans, offsetRotation);
     }
 }
-
-
-function getGeodesicalQuaternion() {
-    //TODO can be optimized with better cache
-    const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
-    const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
-    return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
-}
-
 
 function onRightButtonPressed(data) {
     if (data.target.name !== 'rightController') {
@@ -113,31 +137,40 @@ function onLeftAxisChanged(data) {
     } 
 }
 
+function getSpeedFactor() {
+    var speedFactor = Math.min(Math.max(view.camera.elevationToGround / 10, 5), 2000);
+    return speedFactor;
+}
+
 
 function applyRotation(ctrl) {
     if(ctrl.gamepad.axes[2] === 0) {
         return;
     }
     contextXR.deltaRotation += Math.PI / (160 * ctrl.gamepad.axes[2]);
-    const offsetRotation = getGeodesicalQuaternion();
+    const offsetRotation = Controllers.getGeodesicalQuaternion();
     var thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationY(contextXR.deltaRotation);
     var rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
     offsetRotation.premultiply(rotationQuartenion);
-    const trans = view.camera.camera3D.position.clone().multiplyScalar(-1).applyQuaternion(offsetRotation);
-    const transform = new XRRigidTransform( trans, offsetRotation );
-    const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
-    renderer.xr.setReferenceSpace( teleportSpaceOffset );
+    const trans = view.camera.camera3D.position.clone();
+    applyTransformationToXR(trans, offsetRotation);
 }
 
 function udpateCameraElevationLive(ctrl) {
     if(ctrl.gamepad.axes[3] === 0) {
         return;
     }
-    var speed = ctrl.gamepad.axes[3] * 100;
+    // disable clip to ground
+    clipToground = false;
+    var speedFactor = getSpeedFactor();
+    var speed = ctrl.gamepad.axes[3] * speedFactor;
+    const offsetRotation = Controllers.getGeodesicalQuaternion();
     var direction = view.controls.getCameraCoordinate().geodesicNormal.clone();
     direction.multiplyScalar(-speed);
-    contextXR.xrHeadSet.position.add(direction);
+    const trans = view.camera.camera3D.position.clone().add(direction);
+    applyTransformationToXR(trans, offsetRotation);
 }
+
 
 // translation controls
 function onRightAxisChanged(data) {
@@ -169,21 +202,20 @@ function cameraOnFly(ctrl) {
     }
     var directionX = new itowns.THREE.Vector3();
     var directionY = new itowns.THREE.Vector3();
-
+    var speedFactor = getSpeedFactor();
     if (ctrl.gamepad.axes[3] !== 0) {
         // flying following the locked camera look at
-        // TODO itowns.camera.adjustAltitudeToAvoidCollisionWithLayer() to avoid collision
-        var speed = ctrl.gamepad.axes[3] * 100;
-        
+        var speed = ctrl.gamepad.axes[3] * speedFactor;
         directionY = new itowns.THREE.Vector3(0,0,1).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
     } 
     if (ctrl.gamepad.axes[2] !== 0) {
-        var speed = ctrl.gamepad.axes[2] * 100;
-        
+        var speed = ctrl.gamepad.axes[2] * speedFactor;
         directionX = new itowns.THREE.Vector3(1,0,0).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
-        
     }
-    contextXR.xrHeadSet.position.add(directionX.add(directionY));
+    
+    const offsetRotation = Controllers.getGeodesicalQuaternion();
+    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionY));
+    applyTransformationToXR(trans, offsetRotation);
 }
 
 function onRightAxisStop(data) {

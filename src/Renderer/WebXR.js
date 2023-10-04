@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
 import Coordinates from 'Core/Geographic/Coordinates';
+import DEMUtils from 'Utils/DEMUtils';
 
 async function shutdownXR(session) {
     if (session) {
@@ -40,10 +41,8 @@ const initializeWebXR = (view, options) => {
 
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
-
-
-        const xrControllers = initControllers(webXRManager, vrHeadSet);
         
+        const xrControllers = initControllers(webXRManager, vrHeadSet);
         // avoid precision issues for controllers + allows continuous camera movements
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
 
@@ -71,11 +70,13 @@ const initializeWebXR = (view, options) => {
         // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
 
         // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
-        setTimeout(() => xr.setReferenceSpace(teleportSpaceOffset));
+        setTimeout(() => {
+             xr.setReferenceSpace(teleportSpaceOffset);
+         });
         view.notifyChange();
 
         view.camera.camera3D = xr.getCamera();
-        view.camera.camera3D.far = 20000000000;
+        updateFarDistance();
         view.camera.resize(view.camera.width, view.camera.height);
 
         vrHeadSet.add(view.camera.camera3D);
@@ -87,18 +88,25 @@ const initializeWebXR = (view, options) => {
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && view.camera.camera3D.cameras[0]) {
-                if (options.callback) {
-                    options.callback();
-                }
 
-                listenGamepad(xrControllers.left);
-                listenGamepad(xrControllers.right);
+                if (xrControllers.left) {
+                    listenGamepad(xrControllers.left);
+                }
+                if (xrControllers.right) {
+                    listenGamepad(xrControllers.right);
+                }
 
                 view.camera.camera3D.updateMatrix();
                 view.camera.camera3D.updateMatrixWorld(true);
 
                 if (view.scene.matrixWorldAutoUpdate === true) {
                     view.scene.updateMatrixWorld();
+                }
+
+                computeDistanceToGround();
+                updateFarDistance();
+                if (options.callback) {
+                    options.callback();
                 }
 
                 view.notifyChange(view.camera.camera3D, true);
@@ -108,6 +116,22 @@ const initializeWebXR = (view, options) => {
 
         });
     });
+
+    function computeDistanceToGround() {
+        // view.controls.getCameraCoordinate().altitude updates are not triggered
+        const vectorPostion = new THREE.Vector3().setFromMatrixPosition(view.camera.camera3D.matrixWorld);
+        const coordsCamera = new Coordinates(view.referenceCrs, vectorPostion.x, vectorPostion.y, vectorPostion.z);
+        const elevation = DEMUtils.getElevationValueAt(view.tileLayer, coordsCamera, DEMUtils.PRECISE_READ_Z);
+        const coords = coordsCamera.as(view.controls.getCameraCoordinate().crs);
+        view.camera.elevationToGround = coords.altitude - elevation;
+        view.camera.testPosition = vectorPostion;
+        view.camera.projectedCoordinates = coords;
+    }
+
+    function updateFarDistance() {
+        view.camera.camera3D.far =  Math.min(Math.max(view.camera.elevationToGround * 1000, 10000), 100000);
+        view.camera.camera3D.updateProjectionMatrix();
+    }
 
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
