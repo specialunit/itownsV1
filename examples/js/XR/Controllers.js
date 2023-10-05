@@ -11,6 +11,10 @@ const minDeltaAltitude = 1.8;
 // TODO cache geodesicQuat
 
 /**
+ * Controller.userData {
+ *  isSelecting
+ *  lockedTeleportPosition
+ * }
  * requires a contextXR variable.
  */
 Controllers.addControllers = function() {
@@ -22,12 +26,18 @@ Controllers.addControllers = function() {
     controller2.addEventListener('itowns-xr-axes-stop', onRightAxisStop);
     controller2.addEventListener('itowns-xr-button-pressed', onRightButtonPressed);
     controller1.addEventListener('itowns-xr-button-pressed', onLeftButtonPressed);
+    controller1.addEventListener( 'selectstart', onSelectLeftStart );
+    controller1.addEventListener( 'selectend', onSelectLeftEnd );
+    controller2.addEventListener( 'selectstart', onSelectRightStart );
+    controller2.addEventListener( 'selectend', onSelectRightEnd );
+
 
     var cameraRightCtrl = new itowns.THREE.PerspectiveCamera(view.camera.camera3D.fov);
     cameraRightCtrl.position.copy(view.camera.camera3D.position);
     var cameraRighthelper = new itowns.THREE.CameraHelper(cameraRightCtrl);
     view.scene.add(cameraRighthelper);
     contextXR.cameraRightGrp = { camera : cameraRightCtrl, cameraHelper : cameraRighthelper };
+    
     contextXR.controller1 = controller1;
     contextXR.controller2 = controller2;
 }
@@ -41,8 +51,6 @@ Controllers.getGeodesicalQuaternion = function() {
 
 function bindListeners(index) {
     const controller = renderer.xr.getController(index);
-    controller.addEventListener( 'selectstart', onSelectStart );
-    controller.addEventListener( 'selectend', onSelectEnd );
     return controller;
 }
 
@@ -66,12 +74,21 @@ function applyTransformationToXR(trans, offsetRotation) {
     renderer.xr.setReferenceSpace(teleportSpaceOffset);
 }
 
-function onSelectStart() {
+function onSelectRightStart() {
     this.userData.isSelecting = true;
 }
 
-function onSelectEnd() {
+function onSelectLeftStart() {
+    // nothing yet needed
+}
+
+function onSelectRightEnd() { // if locked, should I do a second click to validate as we are locked ?
+    if(!this.userData.isSelecting) {
+        // if has been aborted
+        return;
+    }
     this.userData.isSelecting = false;
+    this.userData.lockedTeleportPosition = false;
     if ( contextXR.coordOnCamera ) {
         const offsetRotation = Controllers.getGeodesicalQuaternion();
         const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
@@ -82,6 +99,19 @@ function onSelectEnd() {
        // compute targeted position relative to the origine camera.
         const trans = new itowns.THREE.Vector3(projectedCoordinate.x, projectedCoordinate.y, projectedCoordinate.z);
         applyTransformationToXR(trans, offsetRotation);
+    }
+}
+
+/**
+ * first left click while right selecting locks the teleportation target
+ * Second left click cancels teleportation target.
+ */
+function onSelectLeftEnd() {
+    if (contextXR.controller2.userData.lockedTeleportPosition) {
+        contextXR.controller2.userData.isSelecting = false;
+    }
+    if (contextXR.controller2.userData.isSelecting) {
+        contextXR.controller2.userData.lockedTeleportPosition = true;
     }
 }
 

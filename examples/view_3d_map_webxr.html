@@ -265,16 +265,22 @@
             }
 
             function render() {
+                if(!contextXR.controller2.userData.isSelecting) {
+                    // if not selecting reset previous state
                 contextXR.INTERSECTION = undefined;
+                }
+                if (!contextXR.controller2.userData.lockedTeleportPosition) {
+                    contextXR.INTERSECTION = undefined;
                 const intersects = intersectInteractiveLayers(); 
-                if ( intersects.length > 0 ) {
+                    if (intersects && intersects.length > 0 ) {
                     updateBboxVisibility(intersects[0].object);
-                    if ( contextXR.controller2.userData.isSelecting === true ) {
+                        if (contextXR.controller2.userData.isSelecting === true) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                     }
                 } else if (contextXR.visibleBbox) {
                     contextXR.visibleBbox.visible = false;
                     contextXR.visibleBbox = undefined;
+                    }
                 }
 
                 if ( contextXR.INTERSECTION )
@@ -313,7 +319,6 @@
                     XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
                     
                     XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
-                    // FIXME position on the ground as an unknown delta... find why
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
@@ -322,11 +327,14 @@
                     view.meshPointer.position.copy(intersectionCoord);
                 } else {
                     // if no more intersection, reset coords.
+                    XRUtils.removeReference('findMe')
+                    XRUtils.removeReference('findMePRECISE');
+                    XRUtils.removeReference('findMeCamera');
+                    XRUtils.removeReference('findMe2');
                     contextXR.coordOnCamera = undefined;
                 }
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
             }
-
 
             //---------  add fake to ground
 
