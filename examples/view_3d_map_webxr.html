@@ -256,11 +256,54 @@
             }
         
             function intersectInteractiveLayers() {
+                if(!contextXR.controller2 || !contextXR.cameraRightGrp.camera) {
+                    return [];
+                }
+                contextXR.controller2.updateMatrixWorld();
                 // test intersection coordinate with terrain
                 contextXR.tempMatrix.identity().extractRotation(contextXR.controller2.matrixWorld);
                 contextXR.raycaster.ray.origin.setFromMatrixPosition(contextXR.controller2.matrixWorld);
                 contextXR.raycaster.ray.direction.set(0, 0, -1).applyMatrix4( contextXR.tempMatrix);
-                return contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
+
+                contextXR.cameraRightGrp.camera.position.copy(contextXR.raycaster.ray.origin);
+                contextXR.cameraRightGrp.camera.lookAt(contextXR.cameraRightGrp.camera.position.clone().add(contextXR.raycaster.ray.direction));
+                contextXR.cameraRightGrp.camera.updateProjectionMatrix();
+                contextXR.cameraRightGrp.cameraHelper.update();
+                // pick terrain coordinate from controller camera 
+                var pickedValueRightCamera = new itowns.THREE.Vector3();
+                // view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
+                view.getPickingPositionFromDepth(null, pickedValueRightCamera);
+               // var testPicking = view.pickObjectsAt(0,0); // TODO change camera
+
+                if(pickedValueRightCamera) {
+                    // console.log('result');
+                }else{
+                    // console.log('no result');
+                }
+/**
+                if(testPicking.length > 0) {
+                    // updateBboxVisibility(testPicking[0].object); doesn't give the expected bbox
+                    view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
+                   // XRUtils.showPosition('accuratePsositon', pickedValueRightCamera, 0xb518c7, 30);
+                  //  XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb51800,30);
+                }
+                */
+                
+               // var pickedValueRightCamera = itowns.CameraUtils.getTransformCameraLookingAtTarget(view, contextXR.cameraRightGrp.camera).coord;
+
+                // XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb518c7,30);
+                // console.log(pickedValue, pickedValueRightCamera);
+                
+
+               var coordOnterrain = new itowns.Coordinates(view.controls.getCameraCoordinate().crs, pickedValueRightCamera.x,pickedValueRightCamera.y,pickedValueRightCamera.z);
+               // XRUtils.showPositionVerticalLine('better_terrain_intersectt', pickedValueRightCamera, 0xb518c7, 1000);
+
+
+                var pointer = new itowns.THREE.Vector2(0,0);
+                // try to pick from hand camera
+                contextXR.raycaster.setFromCamera(pointer, contextXR.cameraRightGrp.camera);
+                var test = contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
+                return test;
             }
 
             function render() {
