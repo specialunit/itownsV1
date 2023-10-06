@@ -49,8 +49,8 @@
             const contextXR = {
                 tempMatrix: new itowns.THREE.Matrix4(),
                 coordOnCamera: {},
-                deltaRotation: 0,
-                interactiveLayers : []
+                interactiveLayers : [],
+                secondCamera: { renderTarget: new itowns.THREE.WebGLRenderTarget(512, 512) }
             };
 
             const scale = 1;
@@ -72,8 +72,7 @@
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);
             var debugMenu = new GuiTools('menuDiv', view);
-
-
+            
             // ---------- DISPLAY ORTHO-IMAGES : ----------
 
             // Add one imagery layer to the scene. This layer's properties are

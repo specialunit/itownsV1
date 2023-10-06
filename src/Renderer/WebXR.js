@@ -72,6 +72,7 @@ const initializeWebXR = (view, options) => {
         // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
         setTimeout(() => {
              xr.setReferenceSpace(teleportSpaceOffset);
+             // does a regression over controller matrixWorld update...
          });
         view.notifyChange();
 
@@ -98,6 +99,7 @@ const initializeWebXR = (view, options) => {
 
                 view.camera.camera3D.updateMatrix();
                 view.camera.camera3D.updateMatrixWorld(true);
+                resyncControlCamera();
 
                 if (view.scene.matrixWorldAutoUpdate === true) {
                     view.scene.updateMatrixWorld();
@@ -116,6 +118,13 @@ const initializeWebXR = (view, options) => {
 
         });
     });
+
+    function resyncControlCamera() {
+        // search for other this.camera in Itowns code for perfs issues
+        view.controls.camera.position.copy(view.camera.camera3D.position);
+        view.controls.camera.updateMatrix();
+        // view.controls.camera.rotation.
+    }
 
     function computeDistanceToGround() {
         // view.controls.getCameraCoordinate().altitude updates are not triggered

@@ -23,9 +23,7 @@ XRUtils.removeReference = function(name) {
     var existingChild = findExistingRef(name);
     if(existingChild) {
         view.scene.remove(existingChild);
-    } else {
-        console.log('no object to remove:', name);
-    }
+    } 
 }
 
 /**
