@@ -31,18 +31,27 @@
         <script src="js/XR/Utils.js"></script>
 
         <script type="module">
-
             import { VRButton } from 'three/addons/webxr/VRButton.js';
+            // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
+            const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4412106.042879028, -26370.61912189091, 4590341.467693916);
+            const mountainsCoordinates = new itowns.Coordinates('EPSG:4326', 6.227, 45.167);
 
             // ---------- SETUP THE VR VIEW : ----------
 
             // Define camera initial position
             const placement = {
-                coord: new itowns.Coordinates('EPSG:4326', 6.227, 45.167),
+                coord: tile3DCoordinates,
+                range: 3000,
+                tilt: 55,
+                heading: 180,
+                /**
                 range: 15000,
                 tilt: 5,
                 heading: 62,
-            }
+                */
+            };
+
+
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
@@ -72,8 +81,8 @@
 
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);
-            var debugMenu = new GuiTools('menuDiv', view);
-            
+            var menuGlobe = new GuiTools('menuDiv', view, 300);
+
             // ---------- DISPLAY ORTHO-IMAGES : ----------
 
             // Add one imagery layer to the scene. This layer's properties are
@@ -83,23 +92,53 @@
                 config.source = new itowns.WMTSSource(config.source);
                 view.addLayer(
                     new itowns.ColorLayer('Ortho', config),
-                ).then(debugMenu.addLayerGUI.bind(debugMenu));
+                ).then(menuGlobe.addLayerGUI.bind(menuGlobe));
             });
 
-            // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
 
-            // Add two elevation layers, each with a different level of detail.
-            // Here again, each layer's properties are defined in a json file.
-            function addElevationLayerFromConfig(config) {
-                config.source = new itowns.WMTSSource(config.source);
-                contextXR.elevationLayer = new itowns.ElevationLayer(config.id, config);
-                view.addLayer(contextXR.elevationLayer).then(debugMenu.addLayerGUI.bind(debugMenu));
+
+            // Create a new Layer 3d-tiles For Pointcloud
+            // -------------------------------------------
+            var $3dTilesLayerSetePC = new itowns.C3DTilesLayer('3d-tiles-geredis', {
+                name: 'geredis',
+                sseThreshold: 5,
+                pntsMode: itowns.PNTS_MODE.CLASSIFICATION,
+                source: new itowns.C3DTilesSource({
+                    url: 'https://10.1.23.22/3dtiles/canupo_classified_pc/tileset.json',
+                }),
+            }, view);
+
+            $3dTilesLayerSetePC.addEventListener(
+                itowns.C3DTILES_LAYER_EVENTS.ON_TILE_CONTENT_LOADED,
+                updatePointCloudSize,
+            );
+
+            // view.addLayer($3dTilesLayerSetePC); doesn't work. Those little thing that takes time to figure out
+            itowns.View.prototype.addLayer.call(view, $3dTilesLayerSetePC);
+
+            //TODO bind this to a button
+            function switchMode(){
+                let pntsLayer = view.getLayerById("3d-tiles-geredis");
+
+                if(pntsLayer){
+                    pntsLayer = pntsLayer;
+                    pntsLayer.pntsMode = pntsLayer.pntsMode == itowns.PNTS_MODE.COLOR ? itowns.PNTS_MODE.CLASSIFICATION : itowns.PNTS_MODE.COLOR;
+                    view.notifyChange(view.camera.camera3D);
+                }
+            }
+
+            function updatePointCloudSize({tileContent}) {
+                tileContent.traverse(function (obj) {
+                    if (obj.isPoints) {
+                        obj.material.size = 2.0;
+                    }
+                });
             }
 
 
             // ------------- webxr interaction ----------------
             view.scene.matrixWorldAutoUpdate = true;
-            
+
             initXR();
 
             function addFakeRoom() {
@@ -144,11 +183,11 @@
                 // resource URL, do not commit as is.
                 "myGLB.glb",
 
-                
+
                 // called when the resource is loaded
                 (gltf) => {
                     gltf.scene.position.copy(new itowns.THREE.Vector3(4486191.121470811, 477820.22721133975, 4495989.354518597));
-                    
+
                     gltf.scene.lookAt(new itowns.THREE.Vector3(0, 0, 0));
                     gltf.scene.rotateX(Math.PI / 2);
                     gltf.scene.rotateX(Math.PI);
@@ -157,7 +196,7 @@
                     gltf.scene.updateMatrixWorld();
                     const gltfBbox = new itowns.THREE.Box3();
                     gltfBbox.setFromObject(gltf.scene);
-                    
+
                     view.scene.add(gltf.scene);
                     const helper = new itowns.THREE.Box3Helper( gltfBbox, 0xffff00 );
                     helper.name="bboxGltfHelper";
@@ -185,19 +224,23 @@
                     });
                 }
             }
-                
+
 
             function initXR() {
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
                 Controllers.addControllers(contextXR);
 
                 addFakeRoom();
-                
+
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
+
+                    document.addEventListener('keydown', function listenDebug(evt) {
+                        console.log(evt, 'pressed');
+                    });
                     contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
                     view.scene.children.forEach((child) => {if(child.name === 'xrHeadset') { contextXR.xrHeadSet = child;} });
-                    
+
                     var testPicking = XRUtils.showPosition('testPicking', new itowns.THREE.Vector3(4486512.584368641, 476258.50340769894, 4497781.931009745), 0xf9429e, 25, true);
                     // contextXR.interactiveLayers.push(testPicking);
                     var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25, true);
@@ -209,10 +252,10 @@
                    // orbitControls.target = gltf.centor vector
                  });
             }
-        
+
             /**
              *  try to performs terrain intersection by pixel reading from a camera set onto controller coordinates.
-             *  FIXME Needs fixes for terrain intersection. 
+             *  FIXME Needs fixes for terrain intersection.
              *  Distances got in return doesn't allow to know if we reached the far distance without intersecting nothing
              *  Distances got from an intersection is wrong.
              */
@@ -230,7 +273,7 @@
                 contextXR.cameraRightGrp.camera.lookAt(contextXR.cameraRightGrp.camera.position.clone().add(contextXR.raycaster.ray.direction));
                 contextXR.cameraRightGrp.camera.updateProjectionMatrix();
                 contextXR.cameraRightGrp.cameraHelper.update();
-                // pick terrain coordinate from controller camera 
+                // pick terrain coordinate from controller camera
                 var pickedValueRightCamera = new itowns.THREE.Vector3();
                 // view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
                 view.getPickingPositionFromDepth(null, pickedValueRightCamera);
@@ -249,12 +292,12 @@
                   //  XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb51800,30, true);
                 }
                 */
-                
+
                // var pickedValueRightCamera = itowns.CameraUtils.getTransformCameraLookingAtTarget(view, contextXR.cameraRightGrp.camera).coord;
 
                 // XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb518c7,30, true);
                 // console.log(pickedValue, pickedValueRightCamera);
-                
+
 
                var coordOnterrain = new itowns.Coordinates(view.controls.getCameraCoordinate().crs, pickedValueRightCamera.x,pickedValueRightCamera.y,pickedValueRightCamera.z);
                // XRUtils.showPositionVerticalLine('better_terrain_intersectt', pickedValueRightCamera, 0xb518c7, 1000, true);
@@ -270,19 +313,19 @@
             function render() {
                 if(!contextXR.controller2.userData.isSelecting) {
                     // if not selecting reset previous state
-                contextXR.INTERSECTION = undefined;
+                    contextXR.INTERSECTION = undefined;
                 }
                 if (!contextXR.controller2.userData.lockedTeleportPosition) {
                     contextXR.INTERSECTION = undefined;
-                const intersects = intersectInteractiveLayers(); 
+                    const intersects = intersectInteractiveLayers();
                     if (intersects && intersects.length > 0 ) {
                         XRUtils.updateBboxVisibility(intersects[0].object);
                         if (contextXR.controller2.userData.isSelecting === true) {
-                        contextXR.INTERSECTION = intersects[ 0 ].point;
-                    }
-                } else if (contextXR.visibleBbox) {
-                    contextXR.visibleBbox.visible = false;
-                    contextXR.visibleBbox = undefined;
+                            contextXR.INTERSECTION = intersects[ 0 ].point;
+                        }
+                    } else if (contextXR.visibleBbox) {
+                        contextXR.visibleBbox.visible = false;
+                        contextXR.visibleBbox = undefined;
                     }
                 }
 
@@ -292,7 +335,7 @@
                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
                    var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
 
-                   // not a {itowns.Coordinates} 
+                   // not a {itowns.Coordinates}
                     var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
                     if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
                         coordOnCamera.coord.altitude += contextXR.deltaAltitude;
@@ -302,7 +345,7 @@
                          coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
                          contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
                     }
-                    
+
                     // must clone Coordinate to avoid side effect, maybe with DEMUtils, but not sure.
                     contextXR.coordOnCamera = new itowns.Coordinates(coordOnCamera.coord.crs);
                     contextXR.coordOnCamera.setFromVector3(coordOnCamera.coord);
@@ -320,13 +363,13 @@
                     XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500, true);
                     XRUtils.showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100, true);
                     XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100, true);
-                    
+
                     XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000, true);
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
 
-                    
+
                     view.meshPointer.position.copy(intersectionCoord);
                 } else {
                     // if no more intersection, reset coords.
@@ -372,6 +415,7 @@
             }
 
             // Listen for globe full initialisation event
+
             view.addEventListener(itowns.GLOBE_VIEW_EVENTS.GLOBE_INITIALIZED, function globeInitialized() {
                 // eslint-disable-next-line no-console
                 console.info('Globe initialized');
@@ -380,11 +424,31 @@
                addMeshToScene();
             });
 
-            var d = new debug.Debug(view, debugMenu.gui);
-            debug.createTileDebugUI(debugMenu.gui, view, view.tileLayer, d);
 
+
+
+            // Add the UI Debug
+            var d = new debug.Debug(view, menuGlobe.gui);
+            debug.createTileDebugUI(menuGlobe.gui, view, view.tileLayer, d);
+            debug.create3dTilesDebugUI(menuGlobe.gui, view, $3dTilesLayerSetePC, d);
+
+            d.switch = function() {
+                switchMode();
+            }
+            menuGlobe.gui.add(d, 'switch').name('Mode Switch');
+
+            // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
+
+            // Add two elevation layers, each with a different level of detail. Here again, each layer's properties are
+            // defined in a json file.
+            function addElevationLayerFromConfig(config) {
+                config.source = new itowns.WMTSSource(config.source);
+                var elevationLayer = new itowns.ElevationLayer(config.id, config);
+                view.addLayer(elevationLayer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
+            }
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT.json').then(addElevationLayerFromConfig);
 
         </script>
     </body>
