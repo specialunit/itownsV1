@@ -43,14 +43,9 @@ const initializeWebXR = (view, options) => {
         view.scene.updateMatrixWorld();
         
         const xrControllers = initControllers(webXRManager, vrHeadSet);
-        // avoid precision issues for controllers + allows continuous camera movements
+        
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
-
-        const itownsDefaultView = { loc: new THREE.Vector3(), rot: new THREE.Quaternion(), scale: new THREE.Vector3() };
-        view.controls.camera.matrix.decompose(itownsDefaultView.loc, itownsDefaultView.rot, itownsDefaultView.scale);
-        // vrHeadSet.position.copy(new THREE.Vector3(position.x, position.y, position.z));
-        // vrHeadSet.applyQuaternion(itownsDefaultView.rot);
-
+        // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
         view.scene.add(vrHeadSet);
 
 
@@ -81,7 +76,6 @@ const initializeWebXR = (view, options) => {
         view.camera.resize(view.camera.width, view.camera.height);
 
         vrHeadSet.add(view.camera.camera3D);
-        // view.camera.setPosition(new Coordinates(view.referenceCrs, 0, 0, 0));
 
         document.addEventListener('keydown', exitXRSession, false);
 
