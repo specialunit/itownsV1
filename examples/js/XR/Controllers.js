@@ -68,6 +68,14 @@ function bindListeners(index) {
 }
 
 function applyTransformationToXR(trans, offsetRotation) {
+    if(!offsetRotation){
+        console.error('missing rotation quaternion');
+        return;
+    }
+    if(!trans) {
+        console.error('missing translation vector');
+        return;
+    }
     const transCoordinate = new itowns.Coordinates(view.referenceCrs, trans.x, trans.y, trans.z);
     const terrainElevation = itowns.DEMUtils.getElevationValueAt(view.tileLayer, transCoordinate, itowns.DEMUtils.PRECISE_READ_Z);
     if(!terrainElevation) {
