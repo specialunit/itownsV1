@@ -116,16 +116,6 @@
             // view.addLayer($3dTilesLayerSetePC); doesn't work. Those little thing that takes time to figure out
             itowns.View.prototype.addLayer.call(view, $3dTilesLayerSetePC);
 
-            //TODO bind this to a button
-            function switchMode(){
-                let pntsLayer = view.getLayerById("3d-tiles-geredis");
-
-                if(pntsLayer){
-                    pntsLayer = pntsLayer;
-                    pntsLayer.pntsMode = pntsLayer.pntsMode == itowns.PNTS_MODE.COLOR ? itowns.PNTS_MODE.CLASSIFICATION : itowns.PNTS_MODE.COLOR;
-                    view.notifyChange(view.camera.camera3D);
-                }
-            }
 
             function updatePointCloudSize({tileContent}) {
                 tileContent.traverse(function (obj) {
@@ -433,7 +423,7 @@
             debug.create3dTilesDebugUI(menuGlobe.gui, view, $3dTilesLayerSetePC, d);
 
             d.switch = function() {
-                switchMode();
+                Controllers.change3DTileRepresentation();
             }
             menuGlobe.gui.add(d, 'switch').name('Mode Switch');
 

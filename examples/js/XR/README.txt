@@ -4,6 +4,8 @@ switch pour tester différents set d’interaction déplacement / rotation.
 activer / désactiver le debug visuel :
 * bouton x manette gauche pico.
 
+changer le mode du 3D tiles
+* bouton Y manette gauche pico.
 
 
 Téléportation :

@@ -169,6 +169,9 @@ function onLeftButtonReleased(data) {
     if (data.message.buttonIndex === 4){
         switchDebugMode();
     }
+    if(data.message.buttonIndex === 5){
+        Controllers.change3DTileRepresentation();
+    }
 }
 
 function onRightButtonReleased(data) {
@@ -179,6 +182,8 @@ function onRightButtonReleased(data) {
     alreadySwitched=false;
     navigationMode[currentNavigationModeIndex].onRightButtonReleased(data);
 }
+
+///////// Common binding available for each mode ////////////////////
 
 function switchNavigationMode() {
     if(alreadySwitched) {
@@ -198,6 +203,17 @@ function switchDebugMode() {
         XRUtils.updateDebugVisibilities(contextXR.showDebug);
         console.log('debug is: ', contextXR.showDebug);
 }
+
+Controllers.change3DTileRepresentation = function() {
+    let pntsLayer = view.getLayerById("3d-tiles-geredis");
+                
+    if(pntsLayer){
+        pntsLayer = pntsLayer;
+        pntsLayer.pntsMode = pntsLayer.pntsMode == itowns.PNTS_MODE.COLOR ? itowns.PNTS_MODE.CLASSIFICATION : itowns.PNTS_MODE.COLOR;
+        view.notifyChange(view.camera.camera3D);
+    }
+}
+
 
 
    /**
