@@ -46,7 +46,10 @@ Controllers.addControllers = function() {
     var cameraRightCtrl = new itowns.THREE.PerspectiveCamera(view.camera.camera3D.fov);
     cameraRightCtrl.position.copy(view.camera.camera3D.position);
     var cameraRighthelper = new itowns.THREE.CameraHelper(cameraRightCtrl);
-    view.scene.add(cameraRighthelper);
+
+    XRUtils.addToScene (cameraRighthelper, true);
+
+    
     contextXR.cameraRightGrp = { camera : cameraRightCtrl, cameraHelper : cameraRighthelper };
     
     contextXR.controller1 = controller1;
@@ -155,6 +158,9 @@ function onLeftButtonReleased(data) {
     leftCtrChangeNavMode = false;
     alreadySwitched=false;
     navigationMode[currentNavigationModeIndex].onLeftButtonReleased(data);
+    if (data.message.buttonIndex === 4){
+        switchDebugMode();
+    }
 }
 
 function onRightButtonReleased(data) {
@@ -171,12 +177,18 @@ function switchNavigationMode() {
         return;
     }
     alreadySwitched = true;
-    console.log('switching nav mode');
     if(currentNavigationModeIndex >= navigationMode.length - 1) {
         currentNavigationModeIndex=0;
     } else {
         currentNavigationModeIndex++;
     }
+    console.log('switching nav mode: ', currentNavigationModeIndex);
+}
+
+function switchDebugMode() {
+        contextXR.showDebug = !contextXR.showDebug;
+        XRUtils.updateDebugVisibilities(contextXR.showDebug);
+        console.log('debug is: ', contextXR.showDebug);
 }
 
 
@@ -274,7 +286,7 @@ const Mode1 = {
         if ( contextXR.coordOnCamera ) {
             const offsetRotation = Controllers.getGeodesicalQuaternion();
             const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
-            XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff);
+            XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff, 50, true);
             // reset continuous translation applied to headSet parent.
             contextXR.xrHeadSet.position.copy(new itowns.THREE.Vector3());
         // compute targeted position relative to the origine camera.
@@ -370,7 +382,7 @@ const Mode2 = {
         if ( contextXR.coordOnCamera ) {
             const offsetRotation = Controllers.getGeodesicalQuaternion();
             const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
-            XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff);
+            XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff, 50, true);
             // reset continuous translation applied to headSet parent.
             contextXR.xrHeadSet.position.copy(new itowns.THREE.Vector3());
         // compute targeted position relative to the origine camera.

@@ -47,6 +47,7 @@
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
             const contextXR = {
+                showDebug: true, // used by /js/XR/Utils.js
                 tempMatrix: new itowns.THREE.Matrix4(),
                 coordOnCamera: {},
                 interactiveLayers : [],
@@ -162,7 +163,7 @@
                     helper.name="bboxGltfHelper";
                     helper.visible = false;
                     view.scene.add(helper);
-                    var gltfBox = generateVRBox(gltf.scene);
+                    var gltfBox = XRUtils.generateVRBox(gltf.scene);
                     applyGltfBoxToCHilds(gltf.scene, gltfBox);
                     contextXR.interactiveLayers.push(gltf.scene);
                     gltf.VRBbox = helper;
@@ -197,10 +198,10 @@
                     contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
                     view.scene.children.forEach((child) => {if(child.name === 'xrHeadset') { contextXR.xrHeadSet = child;} });
                     
-                    var testPicking = XRUtils.showPosition('testPicking', new itowns.THREE.Vector3(4486512.584368641, 476258.50340769894, 4497781.931009745), 0xf9429e, 25);
+                    var testPicking = XRUtils.showPosition('testPicking', new itowns.THREE.Vector3(4486512.584368641, 476258.50340769894, 4497781.931009745), 0xf9429e, 25, true);
                     // contextXR.interactiveLayers.push(testPicking);
-                    var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25);
-                    generateVRBox(testPickingBbox);
+                    var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25, true);
+                    XRUtils.generateVRBox(testPickingBbox);
                     // contextXR.interactiveLayers.push(testPickingBbox);
                     contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes);
 
@@ -208,53 +209,13 @@
                    // orbitControls.target = gltf.centor vector
                  });
             }
-
-            function updateBboxVisibility(object) {
-                if(contextXR.visibleBbox && contextXR.visibleBbox === object.VRBbox){
-                    return;
-                }
-                // proper to box3Helper
-                if(object.box) { 
-                    if (!object.visible) {
-                        resetPreviousVisibleeBbox();
-                        contextXR.visibleBbox = object;
-                        object.visible = true;
-                    }
-                }
-                else if(object.geometry) {
-                    if(!object.VRBbox) {
-                        generateVRBox(object);
-                    }
-                    if (!object.VRBbox.visible) {
-                        resetPreviousVisibleeBbox();
-                        contextXR.visibleBbox = object.VRBbox;
-                        object.VRBbox.visible = true;
-                    }
-                } else if(contextXR.visibleBbox) {
-                    resetPreviousVisibleeBbox();
-                }
-
-                function resetPreviousVisibleeBbox() {
-                    if(contextXR.visibleBbox) {
-                        contextXR.visibleBbox.visible = false;
-                        contextXR.visibleBbox = undefined;
-                    }
-                }
-            }
-
-            function generateVRBox(object) {
-                const objectBbox = new itowns.THREE.Box3();
-                // better than object.geometry.computeBoundingBox(); as it copy parent position.
-                objectBbox.setFromObject(object);
-                object.VRBbox = objectBbox;
-                object.VRBbox = new itowns.THREE.Box3Helper(object.VRBbox, 0xffff00);
-
-                object.VRBbox.name = object.name +'_VRBbox';
-                view.scene.add(object.VRBbox);
-                object.VRBbox.visible = false;
-                return object.VRBbox;
-            }
         
+            /**
+             *  try to performs terrain intersection by pixel reading from a camera set onto controller coordinates.
+             *  FIXME Needs fixes for terrain intersection. 
+             *  Distances got in return doesn't allow to know if we reached the far distance without intersecting nothing
+             *  Distances got from an intersection is wrong.
+             */
             function intersectInteractiveLayers() {
                 if(!contextXR.controller2 || !contextXR.cameraRightGrp.camera) {
                     return [];
@@ -282,21 +243,21 @@
                 }
 /**
                 if(testPicking.length > 0) {
-                    // updateBboxVisibility(testPicking[0].object); doesn't give the expected bbox
+                    // XRUtils.updateBboxVisibility(testPicking[0].object); doesn't give the expected bbox
                     view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
-                   // XRUtils.showPosition('accuratePsositon', pickedValueRightCamera, 0xb518c7, 30);
-                  //  XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb51800,30);
+                   // XRUtils.showPosition('accuratePsositon', pickedValueRightCamera, 0xb518c7, 30, true);
+                  //  XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb51800,30, true);
                 }
                 */
                 
                // var pickedValueRightCamera = itowns.CameraUtils.getTransformCameraLookingAtTarget(view, contextXR.cameraRightGrp.camera).coord;
 
-                // XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb518c7,30);
+                // XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb518c7,30, true);
                 // console.log(pickedValue, pickedValueRightCamera);
                 
 
                var coordOnterrain = new itowns.Coordinates(view.controls.getCameraCoordinate().crs, pickedValueRightCamera.x,pickedValueRightCamera.y,pickedValueRightCamera.z);
-               // XRUtils.showPositionVerticalLine('better_terrain_intersectt', pickedValueRightCamera, 0xb518c7, 1000);
+               // XRUtils.showPositionVerticalLine('better_terrain_intersectt', pickedValueRightCamera, 0xb518c7, 1000, true);
 
 
                 var pointer = new itowns.THREE.Vector2(0,0);
@@ -315,7 +276,7 @@
                     contextXR.INTERSECTION = undefined;
                 const intersects = intersectInteractiveLayers(); 
                     if (intersects && intersects.length > 0 ) {
-                    updateBboxVisibility(intersects[0].object);
+                        XRUtils.updateBboxVisibility(intersects[0].object);
                         if (contextXR.controller2.userData.isSelecting === true) {
                         contextXR.INTERSECTION = intersects[ 0 ].point;
                     }
@@ -356,11 +317,11 @@
                     */
                     cameraFloorIntersect.altitude = justElevationAt;
 
-                    XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500);
-                    XRUtils.showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100);
-                    XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100);
+                    XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500, true);
+                    XRUtils.showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100, true);
+                    XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100, true);
                     
-                    XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000);
+                    XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000, true);
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
