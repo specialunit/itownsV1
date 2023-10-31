@@ -99,7 +99,7 @@
 
             // Create a new Layer 3d-tiles For Pointcloud
             // -------------------------------------------
-            var $3dTilesLayerSetePC = new itowns.C3DTilesLayer('3d-tiles-geredis', {
+            contextXR.pointLayer = new itowns.C3DTilesLayer('3d-tiles-geredis', {
                 name: 'geredis',
                 sseThreshold: 5,
                 pntsMode: itowns.PNTS_MODE.CLASSIFICATION,
@@ -108,13 +108,14 @@
                 }),
             }, view);
 
-            $3dTilesLayerSetePC.addEventListener(
+            contextXR.pointLayer.addEventListener(
                 itowns.C3DTILES_LAYER_EVENTS.ON_TILE_CONTENT_LOADED,
                 updatePointCloudSize,
             );
+            contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
 
-            // view.addLayer($3dTilesLayerSetePC); doesn't work. Those little thing that takes time to figure out
-            itowns.View.prototype.addLayer.call(view, $3dTilesLayerSetePC);
+            // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
+            itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
 
 
             function updatePointCloudSize({tileContent}) {
@@ -296,6 +297,7 @@
                 var pointer = new itowns.THREE.Vector2(0,0);
                 // try to pick from hand camera
                 contextXR.raycaster.setFromCamera(pointer, contextXR.cameraRightGrp.camera);
+                // intersect ok for gltf and 3dtiles, not for terrain elevation as we don't have a geometry of the elevation.
                 var test = contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
                 return test;
             }
@@ -437,7 +439,7 @@
             // Add the UI Debug
             var d = new debug.Debug(view, menuGlobe.gui);
             debug.createTileDebugUI(menuGlobe.gui, view, view.tileLayer, d);
-            debug.create3dTilesDebugUI(menuGlobe.gui, view, $3dTilesLayerSetePC, d);
+            debug.create3dTilesDebugUI(menuGlobe.gui, view, contextXR.pointLayer, d);
 
             d.switch = function() {
                 Controllers.change3DTileRepresentation();
