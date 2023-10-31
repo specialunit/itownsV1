@@ -202,8 +202,8 @@ const initializeWebXR = (view, options) => {
         controller.addEventListener('disconnected', function removeCtrl() {
             this.remove(this.children[0]);
         });
-        controller.addEventListener('connected', function addCtrl(event) {
-            this.add(buildController(event.data));
+        controller.addEventListener('connected', (event) => {
+           // this.add(buildController(event.data));
             // {XRInputSource} event.data
             controller.gamepad = event.data.gamepad;
             // controller.inputSource = event.data;
