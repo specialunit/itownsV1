@@ -11,6 +11,8 @@ var deltaRotation = 0;
 
 var startedPressButton = undefined;
 
+var actionElevationPerformed = false;
+
 // hack mode switch between navigation Mode
 var rightCtrChangeNavMode = false;
 var leftCtrChangeNavMode = false;
@@ -440,6 +442,24 @@ const Mode2 = {
             // disable clip to ground
             clipToground = false;
         }
+
+        var deltaTimePressed = Date.now() - startedPressButton;
+        if(deltaTimePressed > 2000 && !actionElevationPerformed) {
+            const offsetRotation = Controllers.getGeodesicalQuaternion();
+            var deltaTransl;
+            var speedFactor = 1;
+            if (data.message.buttonIndex === 4) {
+                // activate vertical adjustment down : clamp to ground
+                deltaTransl = getTranslationElevation(1000000, speedFactor);
+            }
+            else if (data.message.buttonIndex === 5) {
+                // activate vertical adjustment up : bird view
+                deltaTransl = getTranslationElevation(-10000, speedFactor);
+            }
+            const trans = view.camera.camera3D.position.clone().add(deltaTransl);
+            applyTransformationToXR(trans, offsetRotation);
+            actionElevationPerformed = true;
+        }
     },
     onLeftButtonPressed: function(data) {
         var ctrl = data.message.controller;
@@ -490,36 +510,29 @@ const Mode2 = {
     },
     onRightButtonReleased: function(data) {
         var deltaTransl = new itowns.THREE.Vector3();
-        var deltaTimePressed = Date.now() - startedPressButton;
         startedPressButton = undefined;
-        var speedFactor = 5;
 
         const offsetRotation = Controllers.getGeodesicalQuaternion();
 
-        if(deltaTimePressed > 1000) {
-            speedFactor = 1;
-            if (data.message.buttonIndex === 4) {
-                // activate vertical adjustment down : clamp to ground
-                deltaTransl = getTranslationElevation(1000000, speedFactor);
-            }
-            else if (data.message.buttonIndex === 5) {
-                // activate vertical adjustment up : bird view
-                deltaTransl = getTranslationElevation(-10000, speedFactor);
-            }
-        } else {
+        if (!actionElevationPerformed) {
+            var speedFactor = getSpeedFactor();
             // lower button
             if (data.message.buttonIndex === 4) {
                 // activate vertical adjustment down
-                deltaTransl = getTranslationElevation(5, 1);
-            
+                deltaTransl = getTranslationElevation(5, speedFactor);
+
                 // upper button
             } else if (data.message.buttonIndex === 5) {
                 // activate vertical adjustment up
-                deltaTransl = getTranslationElevation(-5, 1);
+                deltaTransl = getTranslationElevation(-5, speedFactor);
             }
+            const trans = view.camera.camera3D.position.clone().add(deltaTransl);
+            applyTransformationToXR(trans, offsetRotation);
         }
-        const trans = view.camera.camera3D.position.clone().add(deltaTransl);
-        applyTransformationToXR(trans, offsetRotation);
+        else {
+            actionElevationPerformed = false;
+        }
+        
     },
     onLeftButtonReleased: function(data) {
         // inop
