@@ -5,7 +5,7 @@ var renderer;
 // move clipped to a fixed altitude
 var clipToground = false;
 
-const minDeltaAltitude = 1.8;
+Controllers.MIN_DELTA_ALTITUDE = 1.8;
 
 var deltaRotation = 0;
 
@@ -85,9 +85,9 @@ function applyTransformationToXR(trans, offsetRotation) {
         return;
     }
     const coordsProjected = transCoordinate.as(view.controls.getCameraCoordinate().crs);
-    if (clipToground || (coordsProjected.altitude - terrainElevation) - minDeltaAltitude <= 0) {
+    if (clipToground || (coordsProjected.altitude - terrainElevation) - Controllers.MIN_DELTA_ALTITUDE <= 0) {
         clipToground = true;
-        coordsProjected.altitude = terrainElevation + minDeltaAltitude;
+        coordsProjected.altitude = terrainElevation + Controllers.MIN_DELTA_ALTITUDE;
     }
     trans = coordsProjected.as(view.referenceCrs).toVector3();
     var scaleTrans = trans.multiplyScalar(-1);

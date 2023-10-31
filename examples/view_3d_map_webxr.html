@@ -310,8 +310,12 @@
                     const intersects = intersectInteractiveLayers();
                     if (intersects && intersects.length > 0 ) {
                         XRUtils.updateBboxVisibility(intersects[0].object);
+                        updateIntersectionMarker(intersects[0].point);
                         if (contextXR.controller2.userData.isSelecting === true) {
                             contextXR.INTERSECTION = intersects[ 0 ].point;
+                            if(view.meshPointer) {
+                                view.meshPointer.visible = false;
+                            }
                         }
                     } else if (contextXR.visibleBbox) {
                         contextXR.visibleBbox.visible = false;
@@ -321,24 +325,9 @@
 
                 if ( contextXR.INTERSECTION )
                 {
-
-                   var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
-                   var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
-
-                   // not a {itowns.Coordinates}
-                    var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
-                    if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
-                        coordOnCamera.coord.altitude += contextXR.deltaAltitude;
-                    } else {
-                         // by default set altitude to the current camera elevation from terrain
-                         let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
-                         coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
-                         contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
-                    }
-
-                    // must clone Coordinate to avoid side effect, maybe with DEMUtils, but not sure.
-                    contextXR.coordOnCamera = new itowns.Coordinates(coordOnCamera.coord.crs);
-                    contextXR.coordOnCamera.setFromVector3(coordOnCamera.coord);
+                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
+                    var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
+                    getJumpCoordinate(intersectionCoord);
 
                     var cameraFloorIntersect = view.controls.getCameraCoordinate().clone();
                     // FIXME result is not stricly the camera position as expected, maybe due to the intersection position?
@@ -349,27 +338,55 @@
                     but camera matrices seems like in the same level of definition...
                     */
                     cameraFloorIntersect.altitude = justElevationAt;
-
-                    XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500, true);
-                    XRUtils.showPosition('positionJump',  contextXR.coordOnCamera.as(view.referenceCrs), 0xfe0c00, 30, false);
                     XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100, true);
-
-                    XRUtils.showPositionVerticalLine('verticalAxisJump', intersectionCoord, 0xfe0c00, 10000, false);
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
-
-
-                    view.meshPointer.position.copy(intersectionCoord);
                 } else {
                     // if no more intersection, reset coords.
-                    XRUtils.removeReference('findMe')
+                    XRUtils.removeReference('positionJumpDebug')
                     XRUtils.removeReference('positionJump');
                     XRUtils.removeReference('findMeCamera');
                     XRUtils.removeReference('verticalAxisJump');
                     contextXR.coordOnCamera = undefined;
                 }
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
+            }
+
+            function updateIntersectionMarker(intersectionVector){
+                // update marker on terrain position
+                var intersectPosition = new itowns.Coordinates(view.referenceCrs);
+                intersectPosition.setFromVector3(intersectionVector);
+                var coordIntersectedMappedOnLayer = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectPosition, itowns.DEMUtils.PRECISE_READ_Z);
+                if(view.meshPointer && coordIntersectedMappedOnLayer) {
+                    view.meshPointer.visible = true;
+                    view.meshPointer.position.copy(coordIntersectedMappedOnLayer.coord.as(view.referenceCrs));
+                }
+            }
+
+            function getJumpCoordinate(intersectionCoord) {
+                // not a {itowns.Coordinates}
+                var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
+                var coordIntersectItowns = coordOnCamera.coord.clone().as('EPSG:4326');
+                // update jump target altitude.
+                if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
+                    if(coordOnCamera.coord.altitude + contextXR.deltaAltitude < coordOnCamera.coord.altitude + Controllers.MIN_DELTA_ALTITUDE) {
+                        contextXR.deltaAltitude = Controllers.MIN_DELTA_ALTITUDE;
+                    }
+                    coordOnCamera.coord.altitude += contextXR.deltaAltitude;
+                } else {
+                     // by default set altitude to the current camera elevation from terrain
+                     let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
+                     coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
+                     contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
+                }
+
+                // must clone Coordinate to avoid side effect, maybe with DEMUtils, but not sure.
+                contextXR.coordOnCamera = new itowns.Coordinates(coordOnCamera.coord.crs);
+                contextXR.coordOnCamera.setFromVector3(coordOnCamera.coord);
+                XRUtils.showPosition('positionJump',  contextXR.coordOnCamera.as(view.referenceCrs), 0xfe0c00, 30, false);
+                XRUtils.showPositionVerticalLine('verticalAxisJump', intersectionCoord, 0xfe0c00, 10000, false);
+                XRUtils.showPosition('positionJumpDebug', intersectionCoord, 0xfeff00, 5500, true);
             }
 
             //---------  add fake to ground
