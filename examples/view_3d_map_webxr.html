@@ -131,7 +131,7 @@
 
             initXR();
 
-            function addFakeRoom() {
+            function addXRObjects() {
                 contextXR.raycaster = new itowns.THREE.Raycaster();
 
                 var cameraTargetPosition = view.controls.getCameraCoordinate().clone();
@@ -220,7 +220,7 @@
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
                 Controllers.addControllers(contextXR);
 
-                addFakeRoom();
+                addXRObjects();
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
                  {
@@ -351,10 +351,10 @@
                     cameraFloorIntersect.altitude = justElevationAt;
 
                     XRUtils.showPosition('findMe', intersectionCoord, 0xfeff00, 5500, true);
-                    XRUtils.showPosition('findMePRECISE',  contextXR.coordOnCamera.as(view.referenceCrs), 0xaffb00, 100, true);
+                    XRUtils.showPosition('positionJump',  contextXR.coordOnCamera.as(view.referenceCrs), 0xfe0c00, 30, false);
                     XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100, true);
 
-                    XRUtils.showPositionVerticalLine('findMe2', intersectionCoord, 0xfe0c00, 10000, true);
+                    XRUtils.showPositionVerticalLine('verticalAxisJump', intersectionCoord, 0xfe0c00, 10000, false);
 
                     // showing camera floor intersection
                     contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
@@ -364,9 +364,9 @@
                 } else {
                     // if no more intersection, reset coords.
                     XRUtils.removeReference('findMe')
-                    XRUtils.removeReference('findMePRECISE');
+                    XRUtils.removeReference('positionJump');
                     XRUtils.removeReference('findMeCamera');
-                    XRUtils.removeReference('findMe2');
+                    XRUtils.removeReference('verticalAxisJump');
                     contextXR.coordOnCamera = undefined;
                 }
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
