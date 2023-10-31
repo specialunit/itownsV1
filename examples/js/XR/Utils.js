@@ -7,7 +7,9 @@ XRUtils.objects = [];
 
 XRUtils.updateDebugVisibilities = function(showDebugValue) {
     XRUtils.objects.forEach((obj) => { obj.visible = showDebugValue;});
-    contextXR.visibleBbox.visible = showDebugValue;
+    if(contextXR.visibleBbox) {
+        contextXR.visibleBbox.visible = showDebugValue;
+    }
     view.notifyChange();
 }
 
@@ -108,7 +110,7 @@ XRUtils.generateVRBox = function(object) {
     object.VRBbox = new itowns.THREE.Box3Helper(object.VRBbox, 0xffff00);
 
     object.VRBbox.name = (object.name || object.uuid) +'_VRBbox';
-    console.log('adding VRBbox to scene : ', object.VRBbox.name);
+    // console.log('adding VRBbox to scene : ', object.VRBbox.name);
     // no need to add each bbox to the Utils memory
     view.scene.add(object.VRBbox);
     object.VRBbox.visible = false;
