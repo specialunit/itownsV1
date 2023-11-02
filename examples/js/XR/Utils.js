@@ -18,14 +18,16 @@ XRUtils.showPosition = function(name, coordinates, color, radius = 50, isDebug =
 
     if(existingChild) {
         existingChild.position.copy(coordinates);
+        existingChild.scale.copy(new itowns.THREE.Vector3(1,1,1)).multiplyScalar(radius);
     }
     else {
         const previousPos = new itowns.THREE.Mesh(
-            new itowns.THREE.SphereGeometry( radius, 16, 8 ),
+            new itowns.THREE.SphereGeometry( 1, 16, 8 ),
             new itowns.THREE.MeshBasicMaterial( { color: color, wireframe: true } )
         );
         previousPos.name = name;
         previousPos.position.copy(coordinates);
+        previousPos.scale.multiplyScalar(radius);
         XRUtils.addToScene(previousPos, isDebug);
         existingChild = previousPos;
     }
