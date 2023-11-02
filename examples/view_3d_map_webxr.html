@@ -237,7 +237,7 @@
                     var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25, true);
                     XRUtils.generateVRBox(testPickingBbox);
                     // contextXR.interactiveLayers.push(testPickingBbox);
-                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes);
+                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes); 
 
                    // const orbitControls = new itowns.THREE.OrbitControls( view.controls.camera, contextXR.renderer.domElement );
                    // orbitControls.target = gltf.centor vector
@@ -268,7 +268,7 @@
                 var pickedValueRightCamera = new itowns.THREE.Vector3();
                 // view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
                 view.getPickingPositionFromDepth(null, pickedValueRightCamera);
-               // var testPicking = view.pickObjectsAt(0,0); // TODO change camera
+                // var testPicking = view.pickObjectsAt(0,0); // TODO change camera
 
                 if(pickedValueRightCamera) {
                     // console.log('result');
@@ -312,7 +312,7 @@
                     const intersects = intersectInteractiveLayers();
                     if (intersects && intersects.length > 0 ) {
                         XRUtils.updateBboxVisibility(intersects[0].object);
-                        updateIntersectionMarker(intersects[0].point);
+                        updateIntersectionMarker(intersects[0]);
                         if (contextXR.controller2.userData.isSelecting === true) {
                             contextXR.INTERSECTION = intersects[ 0 ].point;
                             if(view.meshPointer) {
@@ -355,15 +355,27 @@
                 contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
             }
 
-            function updateIntersectionMarker(intersectionVector){
-                // update marker on terrain position
-                var intersectPosition = new itowns.Coordinates(view.referenceCrs);
-                intersectPosition.setFromVector3(intersectionVector);
-                var coordIntersectedMappedOnLayer = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectPosition, itowns.DEMUtils.PRECISE_READ_Z);
-                if(view.meshPointer && coordIntersectedMappedOnLayer) {
-                    view.meshPointer.visible = true;
-                    view.meshPointer.position.copy(coordIntersectedMappedOnLayer.coord.as(view.referenceCrs));
+            function updateIntersectionMarker(intersectionObject){
+                var intersectionVector = intersectionObject.point;
+                if(intersectionObject.object.type === 'Points') {
+                    if(view.meshPointer){
+                        view.meshPointer.visible = false;
+                    }
+                    
+                    XRUtils.showPosition('pointsIntersections', intersectionVector, 0xfeff00, view.camera.camera3D.position.distanceTo(intersectionVector) / 100, false);
                 }
+                else {
+                    XRUtils.removeReference('pointsIntersections');
+                    // update marker on terrain position
+                    var intersectPosition = new itowns.Coordinates(view.referenceCrs);
+                    intersectPosition.setFromVector3(intersectionVector);
+                    var coordIntersectedMappedOnLayer = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectPosition, itowns.DEMUtils.PRECISE_READ_Z);
+                    if(view.meshPointer && coordIntersectedMappedOnLayer) {
+                        view.meshPointer.visible = true;
+                        view.meshPointer.position.copy(coordIntersectedMappedOnLayer.coord.as(view.referenceCrs));
+                    }
+                }
+                
             }
 
             function getJumpCoordinate(intersectionCoord) {
