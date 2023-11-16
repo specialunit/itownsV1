@@ -475,9 +475,6 @@
                 view.addLayer(elevationLayer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
             }
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
-            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
-            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT.json').then(addElevationLayerFromConfig);
-
         </script>
     </body>
 </html>
