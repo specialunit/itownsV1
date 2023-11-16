@@ -260,6 +260,13 @@
                 contextXR.raycaster.ray.origin.setFromMatrixPosition(contextXR.controller2.matrixWorld);
                 contextXR.raycaster.ray.direction.set(0, 0, -1).applyMatrix4( contextXR.tempMatrix);
 
+                return contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
+
+               // FIXME, doesn't work + really perf consuming
+               // tryCameraIntersection();
+            }
+
+            function tryCameraIntersection() {
                 contextXR.cameraRightGrp.camera.position.copy(contextXR.raycaster.ray.origin);
                 contextXR.cameraRightGrp.camera.lookAt(contextXR.cameraRightGrp.camera.position.clone().add(contextXR.raycaster.ray.direction));
                 contextXR.cameraRightGrp.camera.updateProjectionMatrix();
