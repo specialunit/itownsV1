@@ -78,6 +78,18 @@ function applyTransformationToXR(trans, offsetRotation) {
         console.error('missing translation vector');
         return;
     }
+    var finalTransformation = trans.multiplyScalar(-1).applyQuaternion(offsetRotation);
+    const transform = new XRRigidTransform(finalTransformation, offsetRotation);
+    const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
+    renderer.xr.setReferenceSpace(teleportSpaceOffset);
+}
+
+/**
+ * Clamp camera to ground if option {clipToground} is active
+ * @param {Vector3} trans 
+ * @returns coordinates clamped to ground
+ */
+function clampToGround(trans) {
     const transCoordinate = new itowns.Coordinates(view.referenceCrs, trans.x, trans.y, trans.z);
     const terrainElevation = itowns.DEMUtils.getElevationValueAt(view.tileLayer, transCoordinate, itowns.DEMUtils.PRECISE_READ_Z);
     if(!terrainElevation) {
@@ -89,13 +101,7 @@ function applyTransformationToXR(trans, offsetRotation) {
         clipToground = true;
         coordsProjected.altitude = terrainElevation + Controllers.MIN_DELTA_ALTITUDE;
     }
-    trans = coordsProjected.as(view.referenceCrs).toVector3();
-    var scaleTrans = trans.multiplyScalar(-1);
-
-    trans = scaleTrans.applyQuaternion(offsetRotation);
-    const transform = new XRRigidTransform(trans, offsetRotation);
-    const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
-    renderer.xr.setReferenceSpace(teleportSpaceOffset);
+    return coordsProjected.as(view.referenceCrs).toVector3();
 }
 
 function onSelectRightStart() {
@@ -296,7 +302,8 @@ function cameraOnFly(ctrl) {
     }
     
     const offsetRotation = Controllers.getGeodesicalQuaternion();
-    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionY));
+    const coordinateDestination = view.camera.camera3D.position.clone().add(directionX.add(directionY));
+    const trans = clampToGround(coordinateDestination);
     applyTransformationToXR(trans, offsetRotation);
 }
 
