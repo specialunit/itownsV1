@@ -138,6 +138,10 @@ const initializeWebXR = (view, options) => {
 
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
+    Adding a few internal states for reactivity 
+    - controller.lockButtonIndex    {number} when a button is pressed, gives its index
+    - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
+    - 
     */
     function listenGamepad(controller) {
         if (controller.gamepad) {
