@@ -63,7 +63,7 @@ const initializeWebXR = (view, options) => {
         const baseReferenceSpace = xr.getReferenceSpace();
         const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
         // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
-
+          
         // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
         setTimeout(() => {
              xr.setReferenceSpace(teleportSpaceOffset);
@@ -72,9 +72,8 @@ const initializeWebXR = (view, options) => {
         view.notifyChange();
 
         view.camera.camera3D = xr.getCamera();
-        updateFarDistance();
+        view.camera.camera3D.far = 100;
         view.camera.resize(view.camera.width, view.camera.height);
-
         vrHeadSet.add(view.camera.camera3D);
 
         document.addEventListener('keydown', exitXRSession, false);
@@ -116,6 +115,7 @@ const initializeWebXR = (view, options) => {
     function resyncControlCamera() {
         // search for other this.camera in Itowns code for perfs issues
         view.controls.camera.position.copy(view.camera.camera3D.position);
+        view.controls.camera.rotation.copy(view.camera.camera3D.rotation);
         view.controls.camera.updateMatrix();
         // view.controls.camera.rotation.
     }
