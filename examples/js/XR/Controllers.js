@@ -171,7 +171,7 @@ function onLeftAxisChanged(data) {
 
 function onRightAxisStop(data) {
     // camera fly reset
-    data.message.controller.flyDirectionMatrix = undefined;
+    data.message.controller.flyDirectionQuat = undefined;
     navigationMode[currentNavigationModeIndex].onRightAxisStop(data);
 }
 
@@ -311,12 +311,16 @@ function getTranslationElevation(axisValue, speedFactor) {
     return direction;
 }
 
+/**
+ * FIXME flying back and forth cause a permanent shift to up.
+ * @param {*} ctrl 
+ * @returns 
+ */
 function cameraOnFly(ctrl) {
-    if (!ctrl.flyDirectionMatrix) {
+    if (!ctrl.flyDirectionQuat) {
         // locking camera look at
-        var matrixHeadset = new itowns.THREE.Matrix4();
-        matrixHeadset.identity().extractRotation( view.camera.camera3D.matrixWorld );
-        ctrl.flyDirectionMatrix = matrixHeadset;
+        // FIXME using {view.camera.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction.
+        ctrl.flyDirectionQuat = view.camera.camera3D.quaternion.clone().normalize();
     }
     if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
         return;
@@ -327,11 +331,11 @@ function cameraOnFly(ctrl) {
     if (ctrl.gamepad.axes[3] !== 0) {
         // flying following the locked camera look at
         var speed = ctrl.gamepad.axes[3] * speedFactor;
-        directionY = new itowns.THREE.Vector3(0,0,1).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
+        directionY = new itowns.THREE.Vector3(0,0,1).applyQuaternion(ctrl.flyDirectionQuat).multiplyScalar(speed);
     } 
     if (ctrl.gamepad.axes[2] !== 0) {
         var speed = ctrl.gamepad.axes[2] * speedFactor;
-        directionX = new itowns.THREE.Vector3(1,0,0).applyMatrix4(ctrl.flyDirectionMatrix).multiplyScalar(speed);
+        directionX = new itowns.THREE.Vector3(1,0,0).applyQuaternion(ctrl.flyDirectionQuat).multiplyScalar(speed);
     }
     
     const offsetRotation = Controllers.getGeodesicalQuaternion();
