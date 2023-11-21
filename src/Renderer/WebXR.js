@@ -168,7 +168,7 @@ const initializeWebXR = (view, options) => {
                     // 0 - gachette index
                     // 1 - gachette majeur
                     // 3 - stick pressed
-                    // 4 - botton button
+                    // 4 - bottom button
                     // 5 - upper button
                     controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
                     controller.lastButtonItem = button;
