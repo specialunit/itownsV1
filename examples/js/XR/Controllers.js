@@ -1,5 +1,8 @@
 const Controllers = {};
 
+var ITOWNS_CAMERA_CRS = 'EPSG:4326';
+var WORLD_CRS = 'EPSG:3857';
+
 var renderer;
 
 // move clipped to a fixed altitude
@@ -19,6 +22,10 @@ var leftCtrChangeNavMode = false;
 var alreadySwitched = false;
 var navigationMode = [];
 var currentNavigationModeIndex = 0;
+// [{ coords: {itowns.Coordinates}, rotation : {Quaternion} }]
+var savedCoordinates = [];
+var indexSavedCoordinates = 0;
+initSavedCoordinates();
 // TODO cache geodesicQuat
 
 /**
@@ -287,6 +294,19 @@ function getTranslationZ(axisValue, speedFactor) {
   directionY = new itowns.THREE.Vector3(0,0,1).applyMatrix4(matrixHeadset).multiplyScalar(speed);
   return directionY;
 }
+
+function printPosition() {
+    console.log('pos:', view.camera.camera3D.position, 'rot:', Controllers.getGeodesicalQuaternion()); 
+}
+
+function switchRegisteredCoordinates() {
+    if(indexSavedCoordinates > savedCoordinates.length - 1) {
+        indexSavedCoordinates = 1;
+    } else{
+        indexSavedCoordinates++;
+    }
+    applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3(), savedCoordinates[indexSavedCoordinates-1].rotation);
+}
               
 
 //////////////////////////////////// MODE 1
@@ -321,6 +341,7 @@ function cameraOnFly(ctrl) {
         // locking camera look at
         // FIXME using {view.camera.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction.
         ctrl.flyDirectionQuat = view.camera.camera3D.quaternion.clone().normalize();
+        console.log(ctrl.flyDirectionQuat);
     }
     if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
         return;
@@ -379,7 +400,7 @@ const Mode1 = {
             const deltaTransl = getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
             const trans = view.camera.camera3D.position.clone().add(deltaTransl);
             clampAndApplyTransformationToXR(trans, offsetRotation);
-        } 
+        }
     },
     onLeftButtonPressed: function(data) {
         var ctrl = data.message.controller;
@@ -420,9 +441,15 @@ const Mode1 = {
     },
     onRightButtonReleased: function(data) {
         // inop
+        if(data.message.buttonIndex === 4) {
+            switchRegisteredCoordinates();
+        }
     },
     onLeftButtonReleased: function(data) {
-        // inop
+        var ctrl = data.message.controller;
+        if (data.message.buttonIndex === 1) {
+         printPosition();
+        }
     }
 };
 
@@ -561,3 +588,13 @@ const Mode2 = {
         // inop
     }
 };
+
+
+function initSavedCoordinates() {
+    var coords0 = new itowns.Coordinates(WORLD_CRS, 4412622, -26373.39453125, 4593361);
+    var rot0 =  new itowns.THREE.Quaternion(-0.6579757940364078, -0.2629275384741631, 0.2629275384741631, 0.6548328591984319);
+    var coords1 = new itowns.Coordinates(WORLD_CRS, 4413284.5, -18949.275390625, 4589538.5);
+    var rot1 = new itowns.THREE.Quaternion(-0.6574699759393404, -0.26308946606438166, 0.26308946606438166, 0.6552107267362463);
+    savedCoordinates.push({coords: coords0, rotation: rot0});
+    savedCoordinates.push({coords: coords1, rotation: rot1});
+}
