@@ -172,7 +172,7 @@ const initializeWebXR = (view, options) => {
                     // 5 - upper button
                     controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
                     controller.lastButtonItem = button;
-                } else if (controller.lastButtonItem === button && controller.lastButtonItem) {
+                } else if (controller.lastButtonItem && controller.lastButtonItem === button) {
                     controller.dispatchEvent({ type: 'itowns-xr-button-released', message: { controller, buttonIndex: index, button } });
                     controller.lastButtonItem = undefined;
                 }
