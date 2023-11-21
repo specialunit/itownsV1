@@ -7,6 +7,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
         <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+        <link rel="stylesheet" type="text/css" href="css/widgets.css">
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>																
+																	  
+
+																																												
     </head>
     <body>
         <div id="viewerDiv"></div>
@@ -219,7 +226,7 @@
 
             function initXR() {
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
-                Controllers.addControllers(contextXR);
+                Controllers.addControllers(view, contextXR);
 
                 addXRObjects();
 

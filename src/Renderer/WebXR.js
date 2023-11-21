@@ -42,7 +42,7 @@ const initializeWebXR = (view, options) => {
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
         
-        const xrControllers = initControllers(webXRManager, vrHeadSet);
+        const xrControllers = initControllers(xr, vrHeadSet);
         
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
         // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
