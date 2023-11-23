@@ -117,14 +117,7 @@ const initializeWebXR = (view, options) => {
     }
 
     function computeDistanceToGround() {
-        // view.controls.getCameraCoordinate().altitude updates are not triggered
-        const vectorPostion = new THREE.Vector3().setFromMatrixPosition(view.camera.camera3D.matrixWorld);
-        const coordsCamera = new Coordinates(view.referenceCrs, vectorPostion.x, vectorPostion.y, vectorPostion.z);
-        const elevation = DEMUtils.getElevationValueAt(view.tileLayer, coordsCamera, DEMUtils.PRECISE_READ_Z);
-        const coords = coordsCamera.as(view.controls.getCameraCoordinate().crs);
-        view.camera.elevationToGround = coords.altitude - elevation;
-        view.camera.testPosition = vectorPostion;
-        view.camera.projectedCoordinates = coords;
+        view.camera.elevationToGround = view.controls.getCameraCoordinate().altitude;
     }
 
     function updateFarDistance() {
