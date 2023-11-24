@@ -21,6 +21,7 @@ let leftCtrChangeNavMode = false;
 let alreadySwitched = false;
 const navigationMode = [];
 let currentNavigationModeIndex = 0;
+var trackPositionActive = true;
 
 let view;
 let contextXR;
@@ -99,6 +100,11 @@ function applyTransformationToXR(trans, offsetRotation) {
         console.error('missing translation vector');
         return;
     }
+    if(trackPositionActive){
+        XRUtils.addPositionPoints('cameraPositionsPoints', trans, 0xb51800, 30, true);
+        XRUtils.addPositionSegment('cameraPositionsLine', trans, 0xffffff, 1, true);
+    }
+
     const finalTransformation = trans.multiplyScalar(-1).applyQuaternion(offsetRotation);
     const transform = new XRRigidTransform(finalTransformation, offsetRotation);
     const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
@@ -448,9 +454,15 @@ const Mode1 = {
         if(data.message.buttonIndex === 4) {
             switchRegisteredCoordinates();
         }
+        if(data.message.buttonIndex === 5) {
+            trackPositionActive = !trackPositionActive;
+        }
     },
     onLeftButtonReleased: (data) => {
         // inop
+        if (data.message.buttonIndex === 1) {
+         printPosition();
+        }
     },
 };
 

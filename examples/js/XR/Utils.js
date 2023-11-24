@@ -74,6 +74,32 @@ XRUtils.addPositionPoints = (name, coordinates, color, size, isDebug = false) =>
  * @param {*} name 
  * @param {*} coordinates 
  * @param {*} color hexa color
+ * @param {*} size 
+ * @param {*} isDebug 
+ */
+XRUtils.addPositionSegment = (name, coordinates, color, size, isDebug = false) => {
+    const existingChild = findExistingRef(name);
+    if (existingChild) {
+        const verticesUpdated = existingChild.geometry.attributes.position.array.values().toArray();
+        verticesUpdated.push(coordinates.x, coordinates.y, coordinates.z);
+        existingChild.geometry.setAttribute('position', new itowns.THREE.Float32BufferAttribute(verticesUpdated, 3));
+    } else {
+        const geometry = new itowns.THREE.BufferGeometry();
+        const vertices = [];
+        vertices.push(coordinates.x, coordinates.y, coordinates.z);
+        const material = new itowns.THREE.PointsMaterial({ size: size, color: color });
+        geometry.setAttribute('position', new itowns.THREE.Float32BufferAttribute(vertices, 3));
+        const particle = new itowns.THREE.Line(geometry, material);
+        particle.name = name;
+        XRUtils.addToScene(particle, isDebug);
+    }
+};
+
+/**
+ * 
+ * @param {*} name 
+ * @param {*} coordinates 
+ * @param {*} color hexa color
  * @param {*} upSize 
  * @param {*} isDebug 
  */
