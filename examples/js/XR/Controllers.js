@@ -179,6 +179,10 @@ function onRightAxisChanged(data) {
     if (data.target.name !== 'rightController') {
         return;
     }
+    if(!data.message.controller.onMoving) {
+        data.message.controller.onMoving = true;
+        console.log("starting right stick");
+    }
     navigationMode[currentNavigationModeIndex].onRightAxisChanged(data);
 }
 
@@ -186,17 +190,25 @@ function onLeftAxisChanged(data) {
     if (data.target.name !== 'leftController') {
         return;
     }
+    if(!data.message.controller.onMoving) {
+        data.message.controller.onMoving = true;
+        console.log("starting left stick");
+    }
     navigationMode[currentNavigationModeIndex].onLeftAxisChanged(data);
 }
 
 function onRightAxisStop(data) {
     // camera fly reset
     data.message.controller.flyDirectionQuat = undefined;
+    console.log("stopping right stick, reset fixed Quat");
+    data.message.controller.onMoving = false;
     navigationMode[currentNavigationModeIndex].onRightAxisStop(data);
 }
 
 function onLeftAxisStop(data) {
     navigationMode[currentNavigationModeIndex].onLeftAxisStop(data);
+    console.log("stopping left stick");
+    data.message.controller.onMoving = false;
 }
 
 function onLeftButtonReleased(data) {
@@ -329,7 +341,7 @@ function getRotationYaw(axisValue) {
         return;
     }
     deltaRotation += Math.PI / (160 * axisValue);
-    console.log('rotY: ', deltaRotation);
+    // console.log('rotY: ', deltaRotation);
     const offsetRotation = Controllers.getGeodesicalQuaternion();
     const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationY(deltaRotation);
     const rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
@@ -354,7 +366,7 @@ function cameraOnFly(ctrl) {
         // locking camera look at
         // FIXME using {view.camera.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction.
         ctrl.flyDirectionQuat = view.camera.camera3D.quaternion.clone().normalize();
-        console.log(ctrl.flyDirectionQuat);
+        console.log("fixing rotation quat", ctrl.flyDirectionQuat);
     }
     if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
         return;
