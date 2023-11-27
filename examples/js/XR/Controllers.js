@@ -67,9 +67,9 @@ Controllers.addControllers = (_view, _contextXR) => {
 
     XRUtils.addToScene (cameraRighthelper, true);
 
-    
+
     contextXR.cameraRightGrp = { camera : cameraRightCtrl, cameraHelper : cameraRighthelper };
-    
+
     contextXR.controller1 = controller1;
     contextXR.controller2 = controller2;
 };
@@ -139,7 +139,7 @@ function onSelectLeftStart() {
     navigationMode[currentNavigationModeIndex].onSelectLeftStart(this);
 }
 
-function onSelectRightEnd() { 
+function onSelectRightEnd() {
     navigationMode[currentNavigationModeIndex].onSelectRightEnd(this);
 }
 
@@ -258,7 +258,7 @@ function switchDebugMode() {
 
 Controllers.change3DTileRepresentation = function() {
     let pntsLayer = view.getLayerById("3d-tiles-geredis");
-                
+
     if(pntsLayer){
         pntsLayer = pntsLayer;
         pntsLayer.pntsMode = pntsLayer.pntsMode == itowns.PNTS_MODE.COLOR ? itowns.PNTS_MODE.CLASSIFICATION : itowns.PNTS_MODE.COLOR;
@@ -285,13 +285,13 @@ function applyTeleportation(ctrl) {
         applyTransformationToXR(trans, offsetRotation);
         // cache.geodesicNormal = null;
     }
-}   
+}
 
 
 
    /**
 function setCameraTocontroller() {
- 
+
     //TODO debug this
     if(!contextXR.controllerCameraRelativePos) {
         contextXR.originalPosition = contextXR.cameraRightGrp.camera.position.clone();
@@ -300,7 +300,7 @@ function setCameraTocontroller() {
         contextXR.controllerCameraRelativePos = contextXR.originalPosition.clone().sub(view.camera.camera3D.position);
     }
     var quat = new itowns.THREE.Quaternion().setFromEuler(contextXR.cameraRightGrp.camera.rotation);
-    
+
     const transform = new XRRigidTransform( contextXR.originalPosition.clone().add(contextXR.controllerCameraRelativePos).applyQuaternion(quat), quat );
     const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
     renderer.xr.setReferenceSpace( teleportSpaceOffset );
@@ -321,7 +321,7 @@ function getTranslationZ(axisValue, speedFactor) {
 }
 
 function printPosition() {
-    console.log('pos:', view.camera.camera3D.position, 'rot:', Controllers.getGeodesicalQuaternion()); 
+    console.log('pos:', view.camera.camera3D.position, 'rot:', Controllers.getGeodesicalQuaternion());
 }
 
 function switchRegisteredCoordinates() {
@@ -332,15 +332,18 @@ function switchRegisteredCoordinates() {
     }
     applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3(), savedCoordinates[indexSavedCoordinates-1].rotation);
 }
-              
+
 
 // ////////////////////////////////// MODE 1
 
 function getRotationYaw(axisValue) {
-    if(axisValue === 0) {
+    if (axisValue === 0) {
         return;
     }
-    deltaRotation += Math.PI / (160 * axisValue);
+    if (axisValue) {
+        deltaRotation += Math.PI * axisValue / (140);
+    }
+
     // console.log('rotY: ', deltaRotation);
     const offsetRotation = Controllers.getGeodesicalQuaternion();
     const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationY(deltaRotation);
@@ -372,20 +375,20 @@ function cameraOnFly(ctrl) {
         return;
     }
     let directionX = new itowns.THREE.Vector3();
-    let directionY = new itowns.THREE.Vector3();
+    let directionZ = new itowns.THREE.Vector3();
     const speedFactor = getSpeedFactor();
     if (ctrl.gamepad.axes[3] !== 0) {
         // flying following the locked camera look at
         const speed = ctrl.gamepad.axes[3] * speedFactor;
-        directionY = new itowns.THREE.Vector3(0, 0, 1).applyQuaternion(ctrl.flyDirectionQuat).multiplyScalar(speed);
+        directionZ = new itowns.THREE.Vector3(0, 0, 1).applyQuaternion(ctrl.flyDirectionQuat).multiplyScalar(speed);
     }
     if (ctrl.gamepad.axes[2] !== 0) {
         const speed = ctrl.gamepad.axes[2] * speedFactor;
         directionX = new itowns.THREE.Vector3(1, 0, 0).applyQuaternion(ctrl.flyDirectionQuat).multiplyScalar(speed);
     }
-    
-    const offsetRotation = Controllers.getGeodesicalQuaternion();
-    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionY));
+
+    const offsetRotation = getRotationYaw();
+    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
     clampAndApplyTransformationToXR(trans, offsetRotation);
 }
 
@@ -418,7 +421,7 @@ const Mode1 = {
             }
             // disable clip to ground
             clipToground = false;
-            const offsetRotation = Controllers.getGeodesicalQuaternion();
+            const offsetRotation = getRotationYaw();
             const speedFactor = getSpeedFactor();
             const deltaTransl = getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
             const trans = view.camera.camera3D.position.clone().add(deltaTransl);
@@ -453,7 +456,7 @@ const Mode1 = {
             const trans = view.camera.camera3D.position.clone();
             const quat = getRotationYaw(ctrl.gamepad.axes[2]);
             applyTransformationToXR(trans, quat);
-        } 
+        }
     },
     onRightAxisStop: (data) => {
         // inop
@@ -494,7 +497,7 @@ const Mode2 = {
     /**
      * first left click while right selecting locks the teleportation target
      * Second left click cancels teleportation target.
-     * @param {*} ctrl 
+     * @param {*} ctrl
      */
     onSelectLeftEnd: (ctrl) => {
         if (contextXR.controller2.userData.lockedTeleportPosition) {
@@ -587,7 +590,7 @@ const Mode2 = {
         } else {
             actionElevationPerformed = false;
         }
-        
+
     },
     onLeftButtonReleased: (data) => {
         // inop
