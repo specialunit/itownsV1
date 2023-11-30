@@ -337,9 +337,6 @@ function switchRegisteredCoordinates() {
 // ////////////////////////////////// MODE 1
 
 function getRotationYaw(axisValue) {
-    if (axisValue === 0) {
-        return;
-    }
     if (axisValue) {
         deltaRotation += Math.PI * axisValue / (140);
     }
