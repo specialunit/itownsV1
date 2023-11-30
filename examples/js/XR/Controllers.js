@@ -22,6 +22,8 @@ let alreadySwitched = false;
 const navigationMode = [];
 let currentNavigationModeIndex = 0;
 var trackPositionActive = true;
+var isMovingLeft = false;
+var isMovingRight = false;
 
 let view;
 let contextXR;
@@ -29,7 +31,7 @@ let contextXR;
 var savedCoordinates = [];
 var indexSavedCoordinates = 1;
 initSavedCoordinates();
-// TODO cache geodesicQuat
+var cache = {};
 
 /**
  * Controller.userData {
@@ -72,6 +74,10 @@ Controllers.addControllers = (_view, _contextXR) => {
 
     contextXR.controller1 = controller1;
     contextXR.controller2 = controller2;
+
+    // init cache
+    cache.position = null;
+    cache.isFixedPosition = false;
 };
 
 Controllers.getGeodesicalQuaternion = () => {
@@ -104,7 +110,6 @@ function applyTransformationToXR(trans, offsetRotation) {
         XRUtils.addPositionPoints('cameraPositionsPoints', trans, 0xb51800, 30, true);
         XRUtils.addPositionSegment('cameraPositionsLine', trans, 0xffffff, 1, true);
     }
-
     const finalTransformation = trans.multiplyScalar(-1).applyQuaternion(offsetRotation);
     const transform = new XRRigidTransform(finalTransformation, offsetRotation);
     const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
@@ -179,8 +184,8 @@ function onRightAxisChanged(data) {
     if (data.target.name !== 'rightController') {
         return;
     }
-    if(!data.message.controller.onMoving) {
-        data.message.controller.onMoving = true;
+    if(!isMovingRight) {
+        isMovingRight = true;
         console.log("starting right stick");
     }
     navigationMode[currentNavigationModeIndex].onRightAxisChanged(data);
@@ -190,8 +195,8 @@ function onLeftAxisChanged(data) {
     if (data.target.name !== 'leftController') {
         return;
     }
-    if(!data.message.controller.onMoving) {
-        data.message.controller.onMoving = true;
+    if(!isMovingLeft) {
+        isMovingLeft = true;
         console.log("starting left stick");
     }
     navigationMode[currentNavigationModeIndex].onLeftAxisChanged(data);
@@ -201,14 +206,14 @@ function onRightAxisStop(data) {
     // camera fly reset
     data.message.controller.flyDirectionQuat = undefined;
     console.log("stopping right stick, reset fixed Quat");
-    data.message.controller.onMoving = false;
+    isMovingRight = false;
     navigationMode[currentNavigationModeIndex].onRightAxisStop(data);
 }
 
 function onLeftAxisStop(data) {
     navigationMode[currentNavigationModeIndex].onLeftAxisStop(data);
     console.log("stopping left stick");
-    data.message.controller.onMoving = false;
+    isMovingLeft = false;
 }
 
 function onLeftButtonReleased(data) {
@@ -450,7 +455,12 @@ const Mode1 = {
         if (contextXR.INTERSECTION) {
             // inop
         } else {
-            const trans = view.camera.camera3D.position.clone();
+            let trans = cache.isFixedPosition ? cache.position.clone() : view.camera.camera3D.position.clone();
+            if(!isMovingRight && !cache.isFixedPosition) {
+                cache.position = view.camera.camera3D.position.clone();
+                trans = view.camera.camera3D.position.clone();
+                cache.isFixedPosition = true;
+            }
             const quat = getRotationYaw(ctrl.gamepad.axes[2]);
             applyTransformationToXR(trans, quat);
         }
@@ -459,7 +469,8 @@ const Mode1 = {
         // inop
     },
     onLeftAxisStop: (data) => {
-        // inop
+        console.log("left axis stop mode 1");
+        cache.isFixedPosition = false;
     },
     onRightButtonReleased: (data) => {
         // inop
