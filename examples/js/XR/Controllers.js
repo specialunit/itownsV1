@@ -27,7 +27,7 @@ let view;
 let contextXR;
 // [{ coords: {itowns.Coordinates}, rotation : {Quaternion} }]
 var savedCoordinates = [];
-var indexSavedCoordinates = 0;
+var indexSavedCoordinates = 1;
 initSavedCoordinates();
 // TODO cache geodesicQuat
 
@@ -603,6 +603,13 @@ function initSavedCoordinates() {
     var rot0 =  new itowns.THREE.Quaternion(-0.6579757940364078, -0.2629275384741631, 0.2629275384741631, 0.6548328591984319);
     var coords1 = new itowns.Coordinates(WORLD_CRS, 4413284.5, -18949.275390625, 4589538.5);
     var rot1 = new itowns.THREE.Quaternion(-0.6574699759393404, -0.26308946606438166, 0.26308946606438166, 0.6552107267362463);
+    var coords2 = new itowns.Coordinates(WORLD_CRS, 4413334, -20101.763671875, 4589446);
+    var rot2 = new itowns.THREE.Quaternion(-0.6575365516693648, -0.26309449351722863, 0.26309449351722863, 0.6551398768053935);
+    var coords3 = new itowns.Coordinates(WORLD_CRS, 4413393, -19901.205078125, 4589395.5);
+    var rot3 =  new itowns.THREE.Quaternion(-0.6575230100706515, -0.26309850880864316, 0.26309850880864316, 0.6551502427328912);
+
     savedCoordinates.push({coords: coords0, rotation: rot0});
     savedCoordinates.push({coords: coords1, rotation: rot1});
+    savedCoordinates.push({coords: coords2, rotation: rot2});
+    savedCoordinates.push({coords: coords3, rotation: rot3});
 }
