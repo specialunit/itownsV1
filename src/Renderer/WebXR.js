@@ -41,9 +41,9 @@ const initializeWebXR = (view, options) => {
 
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
-        
+
         const xrControllers = initControllers(xr, vrHeadSet);
-        
+
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
         // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
         view.scene.add(vrHeadSet);
@@ -63,7 +63,7 @@ const initializeWebXR = (view, options) => {
         const baseReferenceSpace = xr.getReferenceSpace();
         const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
         // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
-          
+
         // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
         setTimeout(() => {
              xr.setReferenceSpace(teleportSpaceOffset);
@@ -87,6 +87,7 @@ const initializeWebXR = (view, options) => {
                     listenGamepad(xrControllers.left);
                 }
                 if (xrControllers.right) {
+
                     listenGamepad(xrControllers.right);
                 }
 
@@ -126,10 +127,10 @@ const initializeWebXR = (view, options) => {
 
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
-    Adding a few internal states for reactivity 
+    Adding a few internal states for reactivity
     - controller.lockButtonIndex    {number} when a button is pressed, gives its index
     - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
-    - 
+    -
     */
     function listenGamepad(controller) {
         if (controller.gamepad) {
@@ -184,8 +185,8 @@ const initializeWebXR = (view, options) => {
         leftGripController.name = 'leftGripController';
         const rightGripController = webXRManager.getControllerGrip(1);
         rightGripController.name = 'rightGripController';
-        bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
-        bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
+        // bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
+        // bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
         vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
         return { left: leftController, right: rightController };
     }
