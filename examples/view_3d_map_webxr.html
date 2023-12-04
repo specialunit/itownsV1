@@ -40,7 +40,7 @@
         <script type="module">
             import { VRButton } from 'three/addons/webxr/VRButton.js';
             // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
-            const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4412106.042879028, -26370.61912189091, 4590341.467693916);
+            const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4413284.5, -18949.275390625, 4589538.5); // 4412106.042879028, -26370.61912189091, 4590341.467693916);
             const mountainsCoordinates = new itowns.Coordinates('EPSG:4326', 6.227, 45.167);
 
             // ---------- SETUP THE VR VIEW : ----------
@@ -48,9 +48,9 @@
             // Define camera initial position
             const placement = {
                 coord: tile3DCoordinates,
-                range: 3000,
-                tilt: 55,
-                heading: 180,
+                range: 1000,
+                tilt: 5,
+                heading: 110,
                 /**
                 range: 15000,
                 tilt: 5,
@@ -110,6 +110,9 @@
                 name: 'geredis',
                 sseThreshold: 5,
                 pntsMode: itowns.PNTS_MODE.CLASSIFICATION,
+                pntsSizeMode:1,
+                pntsMinAttenuatedSize: 1,
+                pntsMaxAttenuatedSize: 1000,
                 source: new itowns.C3DTilesSource({
                     url: 'https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json',
                 }),
@@ -119,6 +122,10 @@
                 itowns.C3DTILES_LAYER_EVENTS.ON_TILE_CONTENT_LOADED,
                 updatePointCloudSize,
             );
+            var geodesic  = view.controls.getCameraCoordinate();
+            var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
+
+            contextXR.pointLayer.object3d.position.add(deltaPointCloud);
             contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
 
             // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
@@ -128,7 +135,7 @@
             function updatePointCloudSize({tileContent}) {
                 tileContent.traverse(function (obj) {
                     if (obj.isPoints) {
-                        obj.material.size = 2.0;
+                        obj.material.size = 200.0;
                     }
                 });
             }
@@ -317,6 +324,7 @@
             }
 
             function render() {
+                return;
                 if(!contextXR.controller2.userData.isSelecting) {
                     // if not selecting reset previous state
                     contextXR.INTERSECTION = undefined;

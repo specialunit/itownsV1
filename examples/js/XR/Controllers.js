@@ -312,7 +312,7 @@ function setCameraTocontroller() {
 }*/
 
 function getSpeedFactor() {
-    const speedFactor = Math.min(Math.max(view.camera.elevationToGround / 10, 5), 2000);
+    const speedFactor = Math.min(Math.max(view.camera.elevationToGround / 50, 2), 2000);
     return speedFactor;
 }
 
