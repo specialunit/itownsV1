@@ -116,6 +116,22 @@
                 source: new itowns.C3DTilesSource({
                     url: 'https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json',
                 }),
+                classification : {
+                    0: { visible: true, name: 'never classified', color: new itowns.THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
+                    1: { visible: true, name: 'unclassified', color: new itowns.THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
+                    2: { visible: true, name: 'ground', color: new itowns.THREE.Color(0.63, 0.32, 0.18), opacity: 0.0 },
+                    3: { visible: true, name: 'low vegetation', color: new itowns.THREE.Color(0.0,  1.0,  0.0), opacity: 1.0 },
+                    4: { visible: true, name: 'medium vegetation', color: new itowns.THREE.Color(0.0,  0.8,  0.0), opacity: 1.0 },
+                    5: { visible: true, name: 'high vegetation', color: new itowns.THREE.Color(0.0,  0.6,  0.0), opacity: 1.0 },
+                    6: { visible: true, name: 'building', color: new itowns.THREE.Color(1.0,  0.66, 0.0), opacity: 1.0 },
+                    7: { visible: true, name: 'low point(noise)', color: new itowns.THREE.Color(1.0,  0.0,  1.0), opacity: 1.0 },
+                    8: { visible: true, name: 'key-point', color: new itowns.THREE.Color(1.0,  0.0,  0.0), opacity: 1.0 },
+                    9: { visible: true, name: 'water', color: new itowns.THREE.Color(0.0,  0.0,  1.0), opacity: 1.0 },
+                    10: { visible: true, name: 'rail', color: new itowns.THREE.Color(0.8,  0.8,  1.0), opacity: 1.0 },
+                    11: { visible: true, name: 'road Surface', color: new itowns.THREE.Color(0.4,  0.4,  0.7), opacity: 1.0 },
+                    12: { visible: true, name: 'overlap', color: new itowns.THREE.Color(1.0,  1.0,  0.0), opacity: 1.0 },
+                    DEFAULT: { visible: true, name: 'default', color: new itowns.THREE.Color(0.3,  0.6,  0.6), opacity: 0.5 },
+                },
             }, view);
 
             contextXR.pointLayer.addEventListener(
@@ -130,6 +146,33 @@
 
             // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
             itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
+
+            // add building layer
+
+            var buildingsSource = new itowns.VectorTilesSource({
+            style: 'https://wxs.ign.fr/essentiels/static/vectorTiles/styles/PLAN.IGN/standard.json',
+            // Filter to get only buildings
+            filter: (layer) => {
+                return layer['source-layer'].includes('bati_surf')
+                    && layer.paint["fill-color"];
+            },
+        });
+
+        var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
+            source: buildingsSource,
+            zoom: {min: 15},
+            // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
+            // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
+            accurate: false,
+            style: new itowns.Style({
+                fill: {
+                    base_altitude: (p) => p.alti_sol || 0,
+                    extrusion_height: (p) => p.hauteur || 0
+                },
+            })
+        });
+
+        view.addLayer(buildingsLayer);
 
 
             function updatePointCloudSize({tileContent}) {
