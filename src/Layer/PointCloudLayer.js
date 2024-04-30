@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import GeometryLayer from 'Layer/GeometryLayer';
 import PointsMaterial, { PNTS_MODE } from 'Renderer/PointsMaterial';
 import Picking from 'Core/Picking';
+import proj4 from 'proj4';
 
 const point = new THREE.Vector3();
 const bboxMesh = new THREE.Mesh();
@@ -229,6 +230,29 @@ class PointCloudLayer extends GeometryLayer {
          * @type {PointCloudNode | undefined}
          */
         this.root = undefined;
+    }
+
+    setRootBbox(min, max) {
+        let forward = (x => x);
+        if (this.source.crs !== this.crs) {
+            try {
+                forward = proj4(this.source.crs, this.crs).forward;
+            } catch (err) {
+                throw new Error(`${err} is not defined in proj4`);
+            }
+        }
+
+        const bounds = [
+            ...forward(min),
+            ...forward(max),
+        ];
+
+        this.root.bbox.setFromArray(bounds);
+    }
+
+    setElevationRange(zmin, zmax) {
+        this.minElevationRange = this.minElevationRange ?? zmin;
+        this.maxElevationRange = this.maxElevationRange ?? zmax;
     }
 
     preUpdate(context, changeSources) {

@@ -50,13 +50,16 @@ describe('Potree2 Provider', function () {
             file: 'metadata.json',
             url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
             networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
+            crs: 'EPSG:4978',
             metadata,
         });
 
         const layer1 = new Potree2Layer('pointsCloud1', { source, crs: view.referenceCrs });
         layers.push(layer1);
-        const p1 = layer1.whenReady.then((l) => {
-            const normalDefined = l.material.defines.NORMAL || l.material.defines.NORMAL_SPHEREMAPPED || l.material.defines.NORMAL_OCT16;
+        const p1 = layer1.whenReady.then(() => {
+            const normalDefined = layer1.material.defines.NORMAL
+                || layer1.material.defines.NORMAL_SPHEREMAPPED
+                || layer1.material.defines.NORMAL_OCT16;
             assert.ok(!normalDefined);
         });
 
@@ -65,6 +68,7 @@ describe('Potree2 Provider', function () {
             file: 'metadata.json',
             url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
             networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
+            crs: 'EPSG:4978',
             metadata: {
                 version: '2.0',
                 name: 'lion',
@@ -121,10 +125,10 @@ describe('Potree2 Provider', function () {
 
         const layer2 = new Potree2Layer('pointsCloud2', { source, crs: view.referenceCrs });
         layers.push(layer2);
-        const p2 = layer2.whenReady.then((l) => {
-            assert.ok(l.material.defines.NORMAL);
-            assert.ok(!l.material.defines.NORMAL_SPHEREMAPPED);
-            assert.ok(!l.material.defines.NORMAL_OCT16);
+        const p2 = layer2.whenReady.then(() => {
+            assert.ok(layer2.material.defines.NORMAL);
+            assert.ok(!layer2.material.defines.NORMAL_SPHEREMAPPED);
+            assert.ok(!layer2.material.defines.NORMAL_OCT16);
         });
 
         // // spheremapped normals
@@ -132,6 +136,7 @@ describe('Potree2 Provider', function () {
             file: 'metadata.json',
             url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
             networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
+            crs: 'EPSG:4978',
             metadata: {
                 version: '2.0',
                 name: 'lion',
@@ -188,10 +193,10 @@ describe('Potree2 Provider', function () {
         const layer3 = new Potree2Layer('pointsCloud3', { source, crs: view.referenceCrs });
 
         layers.push(layer3);
-        const p3 = layer3.whenReady.then((l) => {
-            assert.ok(!l.material.defines.NORMAL);
-            assert.ok(l.material.defines.NORMAL_SPHEREMAPPED);
-            assert.ok(!l.material.defines.NORMAL_OCT16);
+        const p3 = layer3.whenReady.then(() => {
+            assert.ok(!layer3.material.defines.NORMAL);
+            assert.ok(layer3.material.defines.NORMAL_SPHEREMAPPED);
+            assert.ok(!layer3.material.defines.NORMAL_OCT16);
         });
 
         // // oct16 normals
@@ -199,6 +204,7 @@ describe('Potree2 Provider', function () {
             file: 'metadata.json',
             url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
             networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
+            crs: 'EPSG:4978',
             metadata: {
                 version: '2.0',
                 name: 'lion',
@@ -256,10 +262,10 @@ describe('Potree2 Provider', function () {
 
         layers.push(layer4);
         const p4 = layer4.whenReady
-            .then((l) => {
-                assert.ok(!l.material.defines.NORMAL);
-                assert.ok(!l.material.defines.NORMAL_SPHEREMAPPED);
-                assert.ok(l.material.defines.NORMAL_OCT16);
+            .then(() => {
+                assert.ok(!layer4.material.defines.NORMAL);
+                assert.ok(!layer4.material.defines.NORMAL_SPHEREMAPPED);
+                assert.ok(layer4.material.defines.NORMAL_OCT16);
             });
 
         layers.forEach(p => View.prototype.addLayer.call(view, p));

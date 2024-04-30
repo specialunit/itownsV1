@@ -1,10 +1,8 @@
 import proj4 from 'proj4';
 import { Binary, Info, Las } from 'copc';
-import Extent from 'Core/Geographic/Extent';
 import Fetcher from 'Provider/Fetcher';
 import LASParser from 'Parser/LASParser';
 import Source from 'Source/Source';
-import * as THREE from 'three';
 
 /**
  * @param {function(number, number):Promise<Uint8Array>} fetcher
@@ -99,6 +97,7 @@ class CopcSource extends Source {
                     range: `bytes=${begin}-${end - 1}`,
                 },
             }).then(buffer => new Uint8Array(buffer));
+
         this.whenReady = getHeaders(get).then((metadata) => {
             this.header = metadata.header;
             this.info = metadata.info;
@@ -118,11 +117,6 @@ class CopcSource extends Source {
             if (!(this.crs in proj4.defs)) {
                 proj4.defs(this.crs, projCS);
             }
-
-            const bbox = new THREE.Box3();
-            bbox.min.fromArray(this.info.cube, 0);
-            bbox.max.fromArray(this.info.cube, 3);
-            this.extent = Extent.fromBox3(this.crs, bbox);
 
             return this;
         });
