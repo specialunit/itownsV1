@@ -35,7 +35,15 @@ describe('LASParser', function () {
 
         it('parses a las file to a THREE.BufferGeometry', async function () {
             if (!lasData) { this.skip(); }
-            const bufferGeometry = await LASParser.parse(lasData);
+            const options = {
+                in: {
+                    crs: 'EPSG:3857',
+                },
+                out: {
+                    crs: 'EPSG:3857',
+                },
+            };
+            const bufferGeometry = await LASParser.parse(lasData, options);
             const header = bufferGeometry.userData.header;
             const origin = bufferGeometry.userData.origin;
             assert.strictEqual(header.pointCount, 106);
@@ -55,7 +63,15 @@ describe('LASParser', function () {
 
         it('parses a laz file to a THREE.BufferGeometry', async function () {
             if (!lazV14Data) { this.skip(); }
-            const bufferGeometry = await LASParser.parse(lazV14Data);
+            const options = {
+                in: {
+                    crs: 'EPSG:3857',
+                },
+                out: {
+                    crs: 'EPSG:3857',
+                },
+            };
+            const bufferGeometry = await LASParser.parse(lazV14Data, options);
             const header = bufferGeometry.userData.header;
             const origin = bufferGeometry.userData.origin;
             assert.strictEqual(header.pointCount, 100000);
@@ -110,8 +126,12 @@ describe('LASParser', function () {
                 in: {
                     pointCount: header.pointCount,
                     header,
+                    // eb,
+                    crs: 'EPSG:3857',
                 },
-                // eb,
+                out: {
+                    crs: 'EPSG:3857',
+                },
             };
             const bufferGeometry = await LASParser.parseChunk(copcData, options);
 

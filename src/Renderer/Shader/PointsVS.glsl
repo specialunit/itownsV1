@@ -33,6 +33,7 @@ attribute vec4 unique_id;
 attribute float intensity;
 attribute float classification;
 attribute float pointSourceID;
+attribute float elevation;
 
 attribute float returnNumber;
 attribute float numberOfReturns;
