@@ -80,6 +80,16 @@ export default {
                     layer.material.mode = PNTS_MODE[value];
                     update();
                 });
+
+            const classeUI = styleUI.addFolder('Classe Visibility').close();
+            Object.entries(layer.material.classificationScheme).forEach((classe) => {
+                classeUI.add(classe[1], 'visible').name(classe[1].name)
+                    .onChange(() => {
+                        layer.material.recomputeVisibleTexture();
+                        update();
+                    });
+            });
+
             const gradiantsNames = Object.keys(layer.material.gradients);
             styleUI.add({ gradient: gradiantsNames[0] }, 'gradient', gradiantsNames).name('gradient')
                 .onChange((value) => {

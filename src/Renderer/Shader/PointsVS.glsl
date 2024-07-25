@@ -4,13 +4,14 @@
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
 varying vec4 vColor; // color_pars_vertex
+varying float visible;
 
 #ifdef USE_POINTS_UV
     varying vec2 vUv;
     uniform mat3 uvTransform;
 #endif
 
-#define NB_CLASS 8.
+#define SOURCE_ID_GROUP 8.
 
 uniform float size;
 uniform float scale;
@@ -25,6 +26,8 @@ uniform vec2 angleRange;
 uniform sampler2D classificationTexture;
 uniform sampler2D discreteTexture;
 uniform sampler2D gradientTexture;
+uniform sampler2D visiTexture;
+
 uniform int sizeMode;
 uniform float minAttenuatedSize;
 uniform float maxAttenuatedSize;
@@ -39,12 +42,14 @@ attribute float numberOfReturns;
 attribute float scanAngle;
 
 void main() {
+    vec2 uv = vec2(classification/255., 0.5);
+    visible = texture2D(visiTexture, uv).r;
+
     vColor = vec4(1.0);
     if (picking) {
         vColor = unique_id;
     } else {
         if (mode == PNTS_MODE_CLASSIFICATION) {
-            vec2 uv = vec2(classification/255., 0.5);
             vColor = texture2D(classificationTexture, uv);
         } else if (mode == PNTS_MODE_NORMAL) {
             vColor.rgb = abs(normal);
@@ -84,7 +89,7 @@ void main() {
             vec2 uv = vec2(numberOfReturns/255., 0.5);
             vColor = texture2D(discreteTexture, uv);
         } else if (mode == PNTS_MODE_POINT_SOURCE_ID) {
-            vec2 uv = vec2(mod(pointSourceID, NB_CLASS)/255., 0.5);
+            vec2 uv = vec2(mod(pointSourceID, SOURCE_ID_GROUP)/255., 0.5);
             vColor = texture2D(discreteTexture, uv);
         } else if (mode == PNTS_MODE_SCAN_ANGLE) {
             float i = (scanAngle - angleRange.x) / (angleRange.y - angleRange.x);

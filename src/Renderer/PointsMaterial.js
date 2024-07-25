@@ -121,19 +121,15 @@ function recomputeTexture(scheme, texture, nbClass) {
     for (let i = 0; i < width; i++) {
         let color;
         let opacity;
-        let visible = true;
 
         if (scheme[i]) {
             color = scheme[i].color;
-            visible = scheme[i].visible;
             opacity = scheme[i].opacity;
         } else if (scheme[i % nbClass]) {
             color = scheme[i % nbClass].color;
-            visible = scheme[i % nbClass].visible;
             opacity = scheme[i % nbClass].opacity;
         } else if (scheme.DEFAULT) {
             color = scheme.DEFAULT.color;
-            visible = scheme.DEFAULT.visible;
             opacity = scheme.DEFAULT.opacity;
         } else {
             color = white;
@@ -144,9 +140,9 @@ function recomputeTexture(scheme, texture, nbClass) {
         data[j + 0] = parseInt(255 * color.r, 10);
         data[j + 1] = parseInt(255 * color.g, 10);
         data[j + 2] = parseInt(255 * color.b, 10);
-        data[j + 3] = visible ? parseInt(255 * opacity, 10) : 0;
+        data[j + 3] = parseInt(255 * opacity, 10);
 
-        needTransparency = needTransparency || opacity < 1 || !visible;
+        needTransparency = needTransparency || opacity < 1;
     }
     texture.needsUpdate = true;
     return needTransparency;
@@ -256,6 +252,14 @@ class PointsMaterial extends THREE.ShaderMaterial {
         textureLUT.magFilter = THREE.NearestFilter;
         CommonMaterial.setUniformProperty(this, 'discreteTexture', textureLUT);
 
+        // add texture to apply visibility.
+        const dataVisi = new Uint8Array(256 * 1);
+        const textureVisi = new THREE.DataTexture(dataVisi, 256, 1, THREE.RedFormat);
+
+        textureVisi.needsUpdate = true;
+        textureVisi.magFilter = THREE.NearestFilter;
+        CommonMaterial.setUniformProperty(this, 'visiTexture', textureVisi);
+
         // Classification and other discrete values scheme
         this.classificationScheme = classificationScheme;
         this.discreteScheme = discreteScheme;
@@ -263,6 +267,7 @@ class PointsMaterial extends THREE.ShaderMaterial {
         // Update classification and discrete Texture
         this.recomputeClassification();
         this.recomputeDiscreteTexture();
+        this.recomputeVisibleTexture();
 
         // Gradient texture for continuous values
         this.gradient = gradient;
@@ -385,6 +390,35 @@ class PointsMaterial extends THREE.ShaderMaterial {
         this.userData.needTransparency[PNTS_MODE.RETURN_TYPE] = needTransparency;
         this.userData.needTransparency[PNTS_MODE.RETURN_COUNT] = needTransparency;
         this.userData.needTransparency[PNTS_MODE.POINT_SOURCE_ID] = needTransparency;
+        this.dispatchEvent({
+            type: 'material_property_changed',
+            target: this.uniforms,
+        });
+    }
+
+    recomputeVisibleTexture() {
+        const texture = this.visiTexture;
+        const scheme = this.classificationScheme;
+
+        const data = texture.image.data;
+        const width = texture.image.width;
+
+        for (let i = 0; i < width; i++) {
+            let visible;
+
+            if (scheme[i]) {
+                visible  = scheme[i].visible;
+            } else if (scheme.DEFAULT) {
+                visible  = scheme.DEFAULT.visible;
+            } else {
+                visible = true;
+            }
+
+            data[i] = visible ? 255 : 0;
+        }
+        texture.needsUpdate = true;
+
+
         this.dispatchEvent({
             type: 'material_property_changed',
             target: this.uniforms,
