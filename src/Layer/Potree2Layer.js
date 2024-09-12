@@ -36,7 +36,6 @@ of the authors and should not be interpreted as representing official policies,
 import * as THREE from 'three';
 import PointCloudLayer from 'Layer/PointCloudLayer';
 import Potree2Node from 'Core/Potree2Node';
-import Extent from 'Core/Geographic/Extent';
 
 import { PointAttribute, Potree2PointAttributes, PointAttributeTypes } from 'Core/Potree2PointAttributes';
 
@@ -151,40 +150,40 @@ class Potree2Layer extends PointCloudLayer {
 
         const resolve = this.addInitializationStep();
 
-        this.source.whenReady.then((metadata) => {
-            this.scale = new THREE.Vector3(1, 1, 1);
-            this.metadata = metadata;
-            this.pointAttributes = parseAttributes(metadata.attributes);
-            this.spacing = metadata.spacing;
+        this.root = [];
+        this.source.whenReady
+            .then((metadata) => {
+                this.scale = new THREE.Vector3(1, 1, 1);
+                this.metadata = metadata;
+                this.pointAttributes = parseAttributes(metadata.attributes);
+                this.spacing = metadata.spacing;
 
-            const normal = Array.isArray(this.pointAttributes.attributes) &&
-               this.pointAttributes.attributes.find(elem => elem.name.startsWith('NORMAL'));
-            if (normal) {
-                this.material.defines[normal.name] = 1;
-            }
+                const normal = Array.isArray(this.pointAttributes.attributes) &&
+                this.pointAttributes.attributes.find(elem => elem.name.startsWith('NORMAL'));
+                if (normal) {
+                    this.material.defines[normal.name] = 1;
+                }
 
-            const min = new THREE.Vector3(...metadata.boundingBox.min);
-            const max = new THREE.Vector3(...metadata.boundingBox.max);
-            const boundingBox = new THREE.Box3(min, max);
+                const min = new THREE.Vector3(...metadata.boundingBox.min);
+                const max = new THREE.Vector3(...metadata.boundingBox.max);
+                const boundingBox = new THREE.Box3(min, max);
 
-            const root = new Potree2Node(0, 0, this);
+                const root = new Potree2Node(0, 0, this);
+                root.bbox = boundingBox;
+                root.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
 
-            root.bbox = boundingBox;
-            root.boundingSphere = boundingBox.getBoundingSphere(new THREE.Sphere());
+                root.id = 'r';
+                root.depth = 0;
+                root.nodeType = 2;
+                root.hierarchyByteOffset = 0n;
+                root.hierarchyByteSize = BigInt(metadata.hierarchy.firstChunkSize);
 
-            root.id = 'r';
-            root.depth = 0;
-            root.nodeType = 2;
-            root.hierarchyByteOffset = 0n;
-            root.hierarchyByteSize = BigInt(metadata.hierarchy.firstChunkSize);
+                root.byteOffset = 0;
 
-            root.byteOffset = 0;
+                this.root.push(root);
 
-            this.root = root;
-
-            this.extent = Extent.fromBox3(this.source.crs || 'EPSG:4326', boundingBox);
-            return this.root.loadOctree().then(resolve);
-        });
+                return root.loadOctree().then(resolve);
+            });
     }
 }
 

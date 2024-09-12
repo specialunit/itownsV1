@@ -2,7 +2,7 @@
     <head>
         <meta charset="UTF-8">
 
-        <title>Itowns - COPC loader</title>
+        <title>Itowns - COPC simple loader</title>
 
         <link rel="stylesheet" type="text/css" href="css/example.css">
         <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
@@ -35,30 +35,39 @@
         <script src="../dist/debug.js"></script>
         <script type="text/javascript">
             let layer; // COPCLayer
+            let view;
+            let control;
 
-            const uri = new URL(location);
-
-            const gui = new dat.GUI();
+            const crs = {
+                'autzen-classified': 'EPSG:2992',
+                sofi: 'EPSG:32611',
+                millsite: 'EPSG:6341',
+            }
 
             const viewerDiv = document.getElementById('viewerDiv');
-            const view = new itowns.View('EPSG:4326', viewerDiv);
-            const controls = new itowns.PlanarControls(view);
-            view.mainLoop.gfxEngine.renderer.setClearColor(0xdddddd);
+            gui = new dat.GUI();
 
-            setUrl(uri.searchParams.get('copc'));
+            const uri = new URL(location);
+            setView(uri.searchParams.get('copc'));
 
             function onLayerReady(layer) {
                 const camera = view.camera.camera3D;
 
                 const lookAt = new itowns.THREE.Vector3();
                 const size = new itowns.THREE.Vector3();
-                layer.root.bbox.getSize(size);
-                layer.root.bbox.getCenter(lookAt);
+
+                const bboxes = layer.root.map(root => root.bbox);
+                let bbox = bboxes[0];
+                for (let i = 1; i < bboxes.length; i++) {
+                    bbox = bbox.union(bboxes[i]);
+                }
+                bbox.getSize(size);
+                bbox.getCenter(lookAt);
 
                 camera.far = 2.0 * size.length();
 
-                controls.groundLevel = layer.root.bbox.min.z;
-                const position = layer.root.bbox.min.clone().add(
+                controls.groundLevel = bbox.min.z;
+                const position = bbox.min.clone().add(
                     size.multiply({ x: 1, y: 1, z: size.x / size.z }),
                 );
 
@@ -68,7 +77,6 @@
 
                 view.notifyChange(camera);
             }
-
 
             function readURL() {
                 const url = document.getElementById('url').value;
@@ -88,19 +96,20 @@
                 history.replaceState(null, null, `?${uri.searchParams.toString()}`);
 
                 input_url.value = url;
+                location.reload()
+            }
+
+            function setView(url) {
+                const copcId = url.split('/').pop().split('.').shift();
+
+                view = new itowns.View(crs[copcId], viewerDiv);
+                controls = new itowns.PlanarControls(view);
+                view.mainLoop.gfxEngine.renderer.setClearColor(0xdddddd);
                 load(url);
             }
 
-
             function load(url) {
                 const source = new itowns.CopcSource({ url });
-
-                if (layer) {
-                    gui.removeFolder(layer.debugUI);
-                    view.removeLayer('COPC');
-                    view.notifyChange();
-                    layer.delete();
-                }
 
                 layer = new itowns.CopcLayer('COPC', {
                     source,

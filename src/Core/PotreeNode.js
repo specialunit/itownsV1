@@ -64,6 +64,11 @@ class PotreeNode extends PointCloudNode {
         }
     }
 
+    createChildOBB(node) {
+        // to check if it's enought
+        node.obb.fromBox3(node.bbox);
+    }
+
     get octreeIsLoaded() {
         return !(this.childrenBitField && this.children.length === 0);
     }

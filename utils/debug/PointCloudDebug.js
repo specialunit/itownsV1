@@ -79,7 +79,7 @@ export default {
         layer.debugUI.add(layer, 'sseThreshold').name('SSE threshold').onChange(update);
         layer.debugUI.add(layer, 'octreeDepthLimit', -1, 20).name('Depth limit').onChange(update);
         layer.debugUI.add(layer, 'pointBudget', 1, 15000000).name('Max point count').onChange(update);
-        layer.debugUI.add(layer.object3d.position, 'z', -50, 50).name('Z translation').onChange(() => {
+        layer.debugUI.add(layer.object3d.position, 'z', -500, 500).name('Z translation').onChange(() => {
             layer.object3d.updateMatrixWorld();
             view.notifyChange(layer);
         });
@@ -186,6 +186,7 @@ export default {
         // UI
         const debugUI = layer.debugUI.addFolder('Debug');
         debugUI.add(layer.bboxes, 'visible').name('Display Bounding Boxes').onChange(update);
+        debugUI.add(layer.obbes, 'visible').name('Display Oriented Boxes').onChange(update);
         debugUI.add(layer, 'dbgStickyNode').name('Sticky node name').onChange(update);
         debugUI.add(layer, 'dbgDisplaySticky').name('Display sticky node').onChange(update);
         debugUI.add(layer, 'dbgDisplayChildren').name('Display children of sticky node').onChange(update);

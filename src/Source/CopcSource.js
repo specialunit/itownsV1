@@ -1,9 +1,8 @@
+import proj4 from 'proj4';
 import { Binary, Info, Las } from 'copc';
-import Extent from 'Core/Geographic/Extent';
 import Fetcher from 'Provider/Fetcher';
 import LASParser from 'Parser/LASParser';
 import Source from 'Source/Source';
-import * as THREE from 'three';
 
 /**
  * @param {function(number, number):Promise<Uint8Array>} fetcher
@@ -85,11 +84,12 @@ class CopcSource extends Source {
      */
     constructor(config) {
         super(config);
+        if (this.isMultiple) { return; }
 
         this.isCopcSource = true;
 
-        this.parser = LASParser.parseChunk;
         this.fetcher = Fetcher.arrayBuffer;
+        this.parser = LASParser.parseChunk;
 
         this.colorDepth = config.colorDepth ?? 16;
 
@@ -101,17 +101,29 @@ class CopcSource extends Source {
                     range: `bytes=${begin}-${end - 1}`,
                 },
             }).then(buffer => new Uint8Array(buffer));
+
         this.whenReady = getHeaders(get).then((metadata) => {
             this.header = metadata.header;
             this.info = metadata.info;
             this.eb = metadata.eb;
-            // TODO: use wkt definition in `metadata.wkt` to infer/define crs
-            this.crs = config.crs || 'EPSG:4326';
 
-            const bbox = new THREE.Box3();
-            bbox.min.fromArray(this.info.cube, 0);
-            bbox.max.fromArray(this.info.cube, 3);
-            this.extent = Extent.fromBox3(this.crs, bbox);
+            proj4.defs('unknown', metadata.wkt);
+            this.crs = proj4.defs('unknown').name;
+            proj4.defs(this.crs, proj4.defs('unknown'));
+
+            if (proj4.defs('unknown').type === 'COMPD_CS') {
+                console.warn('CopcSource: compound coordinate system is not yet supported.');
+                metadata.wkt = metadata.wkt.slice(metadata.wkt.search('PROJCS'), metadata.wkt.search(',VERT_CS'));
+                proj4.defs('unknown', metadata.wkt);
+                const projCS = proj4.defs('unknown');
+                if (projCS.AUTHORITY) {
+                    const authority = Object.keys(projCS.AUTHORITY)[0];
+                    this.crs = `${authority}:${projCS.AUTHORITY[authority]}`;
+                    proj4.defs(this.crs, proj4.defs('unknown'));
+                } else {
+                    this.crs = config.crs || 'EPSG:4326';
+                }
+            }
 
             return this;
         });

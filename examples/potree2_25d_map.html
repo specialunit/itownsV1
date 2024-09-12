@@ -99,17 +99,22 @@
                     var lookAt = new itowns.THREE.Vector3();
                     var size = new itowns.THREE.Vector3();
 
-                    potreeLayer.root.bbox.getSize(size);
-                    potreeLayer.root.bbox.getCenter(lookAt);
+                    const bboxes = potreeLayer.root.map(root => root.bbox);
+                    let bbox = bboxes[0];
+                    for (let i = 1; i < bboxes.length; i++) {
+                        bbox = bbox.union(bboxes[i]);
+                    }
+                    bbox.getSize(size);
+                    bbox.getCenter(lookAt);
 
                     debug.PointCloudDebug.initTools(view, potreeLayer, debugGui);
 
                     view.camera.camera3D.far = 2.0 * size.length();
 
                     ratio = size.x / size.z;
-                    position = potreeLayer.root.bbox.min.clone().add(
+                    position = bbox.min.clone().add(
                         size.multiply({ x: 0, y: 0, z: ratio * 0.5 }));
-                    lookAt.z = potreeLayer.root.bbox.min.z;
+                    lookAt.z = bbox.min.z;
                     placeCamera(position, lookAt);
                     controls.moveSpeed = size.length() / 3;
 

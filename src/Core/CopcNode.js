@@ -22,15 +22,17 @@ class CopcNode extends PointCloudNode {
      * the node entry
      * @param {number} entryLength - Size of the node entry
      * @param {CopcLayer} layer - Parent COPC layer
+     * @param {CopcSource} source - COPC source
      * @param {number} [numPoints=0] - Number of points given by this entry
      */
-    constructor(depth, x, y, z, entryOffset, entryLength, layer, numPoints = 0) {
+    constructor(depth, x, y, z, entryOffset, entryLength, layer, source, numPoints = 0) {
         super(numPoints, layer);
         this.isCopcNode = true;
 
         this.entryOffset = entryOffset;
         this.entryLength = entryLength;
         this.layer = layer;
+        this.source = source;
         this.depth = depth;
         this.x = x;
         this.y = y;
@@ -50,17 +52,17 @@ class CopcNode extends PointCloudNode {
      * @param {number} size
      */
     async _fetch(offset, size) {
-        return this.layer.source.fetcher(this.layer.source.url, {
-            ...this.layer.source.networkOptions,
+        return this.source.fetcher(this.source.url, {
+            ...this.source.networkOptions,
             headers: {
-                ...this.layer.source.networkOptions.headers,
+                ...this.source.networkOptions.headers,
                 range: `bytes=${offset}-${offset + size - 1}`,
             },
         });
     }
 
     /**
-     * Create an (A)xis (A)ligned (B)ounding (B)ox for the given node given
+     * Create an (A)xis (A)ligned (B)ounding (B)ox for the node given
      * `this` is its parent.
      * @param {CopcNode} node - The child node
      */
@@ -88,6 +90,27 @@ class CopcNode extends PointCloudNode {
 
         // use the size computed above to set the max
         node.bbox.max.copy(node.bbox.min).add(size);
+    }
+
+    /**
+     * Create an (O)riented (B)ounding (B)ox for the node given
+     * `this` is its parent.
+     * @param {CopcNode} childNode - The child node
+     */
+    createChildOBB(childNode) {
+        const f = 2 ** (childNode.depth - this.depth);
+
+        this.obb.getSize(size).divideScalar(f);
+
+        position.copy(this).multiplyScalar(f);
+
+        translation.subVectors(childNode, position).multiply(size);
+
+        childNode.obb = this.obb.clone();
+        childNode.obb.halfSize.divideScalar(f);
+
+        childNode.obb.center = this.obb.center.clone().add(this.obb.halfSize.clone().multiplyScalar(-0.5)).add(translation);
+        childNode.obb.position = this.obb.position.clone();
     }
 
     /**
@@ -128,6 +151,7 @@ class CopcNode extends PointCloudNode {
             offset,
             byteSize,
             this.layer,
+            this.source,
             pointCount,
         );
         this.add(child);
@@ -179,9 +203,9 @@ class CopcNode extends PointCloudNode {
         }
 
         const buffer = await this._fetch(this.entryOffset, this.entryLength);
-        const geometry = await this.layer.source.parser(buffer, {
+        const geometry = await this.source.parser(buffer, {
             in: {
-                ...this.layer.source,
+                ...this.source,
                 pointCount: this.numPoints,
             },
             out: this.layer,

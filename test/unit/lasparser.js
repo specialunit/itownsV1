@@ -34,6 +34,7 @@ describe('LASParser', function () {
             assert.strictEqual(bufferGeometry.attributes.classification.count, header.pointCount);
             assert.strictEqual(bufferGeometry.attributes.color, undefined);
 
+            bufferGeometry.computeBoundingBox();
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.x + origin.x, header.min[0], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.y + origin.y, header.min[1], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.z + origin.z, header.min[2], epsilon));
@@ -53,6 +54,7 @@ describe('LASParser', function () {
             assert.strictEqual(bufferGeometry.attributes.classification.count, header.pointCount);
             assert.strictEqual(bufferGeometry.attributes.color.count, header.pointCount);
 
+            bufferGeometry.computeBoundingBox();
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.x + origin.x, header.min[0], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.y + origin.y, header.min[1], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.z + origin.z, header.min[2], epsilon));

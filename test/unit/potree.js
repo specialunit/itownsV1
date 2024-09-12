@@ -88,7 +88,7 @@ describe('Potree', function () {
                 View.prototype.addLayer.call(viewer, potreeLayer)
                     .then((layer) => {
                         context.camera.camera3D.updateMatrixWorld();
-                        assert.equal(layer.root.children.length, 6);
+                        assert.equal(layer.root[0].children.length, 6);
                         layer.bboxes.visible = true;
                         done();
                     }).catch(done);

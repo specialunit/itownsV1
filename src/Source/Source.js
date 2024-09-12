@@ -116,6 +116,10 @@ class Source extends InformationsData {
             throw new Error('New Source: url is required');
         }
 
+        if (source.url.constructor === Array) {
+            this.isMultiple = true;
+        }
+
         this.uid = uid++;
 
         this.url = source.url;
@@ -125,8 +129,21 @@ class Source extends InformationsData {
         this.isVectorSource = (source.parser || supportedParsers.get(source.format)) != undefined;
         this.networkOptions = source.networkOptions || { crossOrigin: 'anonymous' };
         this.attribution = source.attribution;
-        /** @type {Promise<any>} */
-        this.whenReady = Promise.resolve();
+
+        if (this.isMultiple) {
+            const promises = [];
+            this.url.forEach((url) => {
+                const source = new this.constructor({ url });
+                promises.push(source.whenReady);
+            });
+            this.whenReady = Promise.all(promises);
+            this.whenReady
+                .then((sources) => { this.sources = sources; });
+        } else {
+            /** @type {Promise<any>} */
+            this.whenReady = Promise.resolve();
+        }
+
         this._featuresCaches = {};
         if (source.extent && !(source.extent.isExtent)) {
             this.extent = new Extent(this.crs, source.extent);

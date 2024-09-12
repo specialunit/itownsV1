@@ -52,15 +52,18 @@ class EntwinePointTileSource extends Source {
                 if (metadata.srs.vertical && metadata.srs.vertical !== metadata.srs.horizontal) {
                     console.warn('EntwinePointTileSource: Vertical coordinates system code is not yet supported.');
                 }
+            } else if (metadata.srs && metadata.srs.wkt) {
+                proj4.defs('unknown', metadata.srs.wkt);
+                this.crs = proj4.defs('unknown').name;
+                proj4.defs(this.crs, proj4.defs('unknown'));
+
+                if (metadata.srs.vertical && metadata.srs.vertical !== metadata.srs.horizontal) {
+                    console.warn('EntwinePointTileSource: Vertical coordinates system code is not yet supported.');
+                }
             }
 
-            // NOTE: this spacing is kinda arbitrary here, we take the width and
-            // length (height can be ignored), and we divide by the specified
-            // span in ept.json. This needs improvements.
-            this.spacing = (Math.abs(metadata.boundsConforming[3] - metadata.boundsConforming[0])
-                + Math.abs(metadata.boundsConforming[4] - metadata.boundsConforming[1])) / (2 * metadata.span);
-
             this.boundsConforming = metadata.boundsConforming;
+            this.bounds = metadata.bounds;
             this.span = metadata.span;
 
             return this;
