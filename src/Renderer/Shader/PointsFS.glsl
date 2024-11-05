@@ -8,8 +8,6 @@
 #include <logdepthbuf_pars_fragment>
 #include <clipping_planes_pars_fragment>
 
-varying float visible;
-
 uniform vec3 diffuse;
 uniform float opacity;
 
@@ -20,9 +18,6 @@ void main() {
 
 // Early discard (clipping planes and shape)
 #include <clipping_planes_fragment>
-    if (visible < 0.5) {
-        discard;
-    }
     if (shape == PNTS_SHAPE_CIRCLE) {
         //circular rendering in glsl
         if ((length(gl_PointCoord - 0.5) > 0.5)) {

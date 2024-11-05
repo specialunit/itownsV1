@@ -4,7 +4,6 @@
 #include <logdepthbuf_pars_vertex>
 #include <clipping_planes_pars_vertex>
 varying vec4 vColor; // color_pars_vertex
-varying float visible;
 
 #ifdef USE_POINTS_UV
     varying vec2 vUv;
@@ -43,7 +42,6 @@ attribute float scanAngle;
 
 void main() {
     vec2 uv = vec2(classification/255., 0.5);
-    visible = texture2D(visiTexture, uv).r;
 
     vColor = vec4(1.0);
     if (picking) {
@@ -105,6 +103,10 @@ void main() {
             vec2 uv = vec2(i, (1. - i));
             vColor = texture2D(gradientTexture, uv);
         }
+    }
+
+    if (texture2D(visiTexture, uv).r == 0.) {
+        vColor.a = 0.;
     }
 
 #define USE_COLOR_ALPHA
