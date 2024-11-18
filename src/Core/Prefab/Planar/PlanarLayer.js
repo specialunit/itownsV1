@@ -11,6 +11,7 @@ import PlanarTileBuilder from './PlanarTileBuilder';
  * internally for optimisation.
  */
 class PlanarLayer extends TiledGeometryLayer {
+    #hasNewExtent;
     /**
      * A {@link TiledGeometryLayer} to use with a {@link PlanarView}. It has
      * specific method for updating and subdivising its grid.
@@ -37,16 +38,26 @@ class PlanarLayer extends TiledGeometryLayer {
     constructor(id, extent, object3d, config = {}) {
         const tms = CRS.formatToTms(extent.crs);
         const tileMatrixSets = [tms];
+        let hasNewExtent = false;
         if (!globalExtentTMS.get(extent.crs)) {
             // Add new global extent for this new crs projection.
             globalExtentTMS.set(extent.crs, extent);
+            hasNewExtent = true;
         }
         config.tileMatrixSets = tileMatrixSets;
         super(id, object3d || new THREE.Group(), [extent], new PlanarTileBuilder({ crs: extent.crs }), config);
         this.isPlanarLayer = true;
+        this.#hasNewExtent = hasNewExtent;
         this.extent = extent;
         this.minSubdivisionLevel = this.minSubdivisionLevel == undefined ? 0 : this.minSubdivisionLevel;
         this.maxSubdivisionLevel = this.maxSubdivisionLevel == undefined ? 5 : this.maxSubdivisionLevel;
+    }
+
+    delete(clearCache) {
+        super.delete(clearCache);
+        if (this.#hasNewExtent) {
+            globalExtentTMS.delete(this.extent.crs);
+        }
     }
 }
 
