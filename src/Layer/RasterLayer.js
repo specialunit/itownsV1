@@ -1,5 +1,5 @@
 import Layer from 'Layer/Layer';
-import { removeLayeredMaterialNodeLayer } from 'Process/LayeredMaterialNodeProcessing';
+import { removeLayeredMaterialNodeTile } from 'Process/LayeredMaterialNodeProcessing';
 import textureConverter from 'Converter/textureConverter';
 import { CACHE_POLICIES } from 'Core/Scheduler/Cache';
 
@@ -34,7 +34,7 @@ class RasterLayer extends Layer {
             this.cache.clear();
         }
         for (const root of this.parent.level0Nodes) {
-            root.traverse(removeLayeredMaterialNodeLayer(this.id));
+            root.traverse(removeLayeredMaterialNodeTile(this.id));
         }
     }
 }

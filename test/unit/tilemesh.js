@@ -177,6 +177,8 @@ describe('TileMesh', function () {
     const material = new THREE.Material();
     material.addLayer = () => { };
     material.setSequenceElevation = () => { };
+    material.setElevationTile = () => { };
+    material.setElevationTileId = () => { };
 
     it('event rasterElevationLevelChanged RasterElevationTile sets TileMesh bounding box ', () => {
         const tileMesh = new TileMesh(geom, material, planarlayer, tile.toExtent('EPSG:3857'), 0);

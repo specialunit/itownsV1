@@ -39,7 +39,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
     const layer = new Layer('foo', {
         source,
         crs: 'EPSG:4326',
-        info: { update: () => {} },
+        info: { update: () => { } },
     });
     layer.tileMatrixSets = [
         'EPSG:4326',
@@ -53,7 +53,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
     };
 
     const nodeLayer = new RasterColorTile(material, layer);
-    material.getLayer = () => nodeLayer;
+    material.getTile = () => nodeLayer;
 
     beforeEach('reset state', function () {
         // clear commands array
@@ -76,7 +76,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
         const tile = new TileMesh(geom, material, layer, extent, 0);
         material.visible = false;
         nodeLayer.level = 0;
-        tile.parent = { };
+        tile.parent = {};
         updateLayeredMaterialNodeImagery(context, layer, tile, tile.parent);
         assert.equal(context.scheduler.commands.length, 0);
     });
@@ -85,7 +85,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
         const tile = new TileMesh(geom, material, layer, extent, 3);
         material.visible = true;
         nodeLayer.level = 3;
-        tile.parent = { };
+        tile.parent = {};
         updateLayeredMaterialNodeImagery(context, layer, tile, tile.parent);
         assert.equal(context.scheduler.commands.length, 0);
     });
@@ -94,7 +94,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
         const tile = new TileMesh(geom, material, layer, extent, 2);
         material.visible = true;
         nodeLayer.level = 1;
-        tile.parent = { };
+        tile.parent = {};
 
         // FIRST PASS: init Node From Parent and get out of the function
         // without any network fetch
@@ -112,7 +112,7 @@ describe('updateLayeredMaterialNodeImagery', function () {
         // Emulate a situation where tile inherited a level 1 texture
         material.visible = true;
         nodeLayer.level = 1;
-        tile.parent = { };
+        tile.parent = {};
         source.isWMTSSource = true;
         source.tileMatrixSet = 'WGS84G';
         // Emulate a situation where tile inherited a level 1 texture

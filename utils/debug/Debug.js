@@ -165,7 +165,7 @@ function Debug(view, datDebugTool, chartDivContainer) {
 
     function updateFogDistance(obj) {
         if (obj.material && fogDistance) {
-            obj.material.fogDistance = fogDistance;
+            obj.material.setUniform('fogDistance', fogDistance);
         }
     }
 

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import TileMesh from 'Core/TileMesh';
-import LayeredMaterial from 'Renderer/LayeredMaterial';
+import { LayeredMaterial } from 'Renderer/LayeredMaterial';
 import { newTileGeometry } from 'Core/Prefab/TileBuilder';
 import ReferLayerProperties from 'Layer/ReferencingLayerProperties';
 import { geoidLayerIsVisible } from 'Layer/GeoidLayer';
@@ -13,7 +13,7 @@ function setTileFromTiledLayer(tile, tileLayer) {
     }
 
     if (__DEBUG__) {
-        tile.material.showOutline = tileLayer.showOutline || false;
+        tile.material.setUniform('showOutline', tileLayer.showOutline || false);
     }
 
     if (tileLayer.isGlobeLayer) {
@@ -73,7 +73,7 @@ export default {
                 tile.geoidHeight = parent.geoidHeight;
                 const geoidHeight = geoidLayerIsVisible(layer) ? tile.geoidHeight : 0;
                 tile.setBBoxZ({ min: parent.obb.z.min, max: parent.obb.z.max, geoidHeight });
-                tile.material.geoidHeight = geoidHeight;
+                tile.material.setUniform('geoidHeight', geoidHeight);
             }
 
             return tile;
