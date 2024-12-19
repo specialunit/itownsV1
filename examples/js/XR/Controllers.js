@@ -1,3 +1,5 @@
+import Coordinates from '../../../src/Core/Geographic/Coordinates.js';
+
 const Controllers = {};
 
 var ITOWNS_CAMERA_CRS = 'EPSG:4326';
@@ -83,6 +85,7 @@ Controllers.addControllers = (_view, _contextXR) => {
 Controllers.getGeodesicalQuaternion = () => {
     // TODO can be optimized with better cache
     const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
+    // const position =Coordinates('EPSG:4978', view.xr.getCamera().position).as('EPSG:4326').clone().as(view.referenceCrs);
     const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
     return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
 };
@@ -395,7 +398,9 @@ function cameraOnFly(ctrl) {
     }
 
     const offsetRotation = getRotationYaw();
-    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
+    // const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
+    const trans = renderer.xr.getCamera().position.clone().add(directionX.add(directionZ));
+    // const trans = directionX.add(directionZ);
     applyTransformationToXR(trans, offsetRotation);
 
     // clampAndApplyTransformationToXR(trans, offsetRotation);
@@ -453,6 +458,7 @@ const Mode1 = {
             // updating elevation at intersection destination
             contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
         } else {
+            console.log("flyyy")
             cameraOnFly(ctrl);
         }
     },
