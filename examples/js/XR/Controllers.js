@@ -113,6 +113,11 @@ function applyTransformationToXR(trans, offsetRotation) {
     const finalTransformation = trans.multiplyScalar(-1).applyQuaternion(offsetRotation);
     const transform = new XRRigidTransform(finalTransformation, offsetRotation);
     const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace(transform);
+    const object = view.scene.getObjectByName('xrHeadset');
+    // var position = object.position
+    // object.position.copy(trans);
+    // view.scene.updateMatrixWorld();
+
     renderer.xr.setReferenceSpace(teleportSpaceOffset);
 }
 
@@ -391,7 +396,9 @@ function cameraOnFly(ctrl) {
 
     const offsetRotation = getRotationYaw();
     const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
-    clampAndApplyTransformationToXR(trans, offsetRotation);
+    applyTransformationToXR(trans, offsetRotation);
+
+    // clampAndApplyTransformationToXR(trans, offsetRotation);
 }
 
 const Mode1 = {

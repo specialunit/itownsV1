@@ -10,10 +10,10 @@
         <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
         <link rel="stylesheet" type="text/css" href="css/widgets.css">
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>																
-																	  
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
 
-																																												
+
+
     </head>
     <body>
         <div id="viewerDiv"></div>
@@ -105,38 +105,15 @@
 
 
             // Create a new Layer 3d-tiles For Pointcloud
-            // -------------------------------------------
-            contextXR.pointLayer = new itowns.C3DTilesLayer('3d-tiles-geredis', {
-                name: 'geredis',
-                sseThreshold: 5,
-                pntsMode: itowns.PNTS_MODE.CLASSIFICATION,
-                pntsSizeMode:1,
-                pntsMinAttenuatedSize: 1,
-                pntsMaxAttenuatedSize: 1000,
-                source: new itowns.C3DTilesSource({
-                    url: 'https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json',
-                }),
-                classification : {
-                    0: { visible: true, name: 'never classified', color: new itowns.THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
-                    1: { visible: true, name: 'unclassified', color: new itowns.THREE.Color(0.5,  0.5,  0.5), opacity: 1.0 },
-                    2: { visible: true, name: 'ground', color: new itowns.THREE.Color(0.63, 0.32, 0.18), opacity: 0.0 },
-                    3: { visible: true, name: 'low vegetation', color: new itowns.THREE.Color(0.0,  1.0,  0.0), opacity: 1.0 },
-                    4: { visible: true, name: 'medium vegetation', color: new itowns.THREE.Color(0.0,  0.8,  0.0), opacity: 1.0 },
-                    5: { visible: true, name: 'high vegetation', color: new itowns.THREE.Color(0.0,  0.6,  0.0), opacity: 1.0 },
-                    6: { visible: true, name: 'building', color: new itowns.THREE.Color(1.0,  0.66, 0.0), opacity: 1.0 },
-                    7: { visible: true, name: 'low point(noise)', color: new itowns.THREE.Color(1.0,  0.0,  1.0), opacity: 1.0 },
-                    8: { visible: true, name: 'key-point', color: new itowns.THREE.Color(1.0,  0.0,  0.0), opacity: 1.0 },
-                    9: { visible: true, name: 'water', color: new itowns.THREE.Color(0.0,  0.0,  1.0), opacity: 1.0 },
-                    10: { visible: true, name: 'rail', color: new itowns.THREE.Color(0.8,  0.8,  1.0), opacity: 1.0 },
-                    11: { visible: true, name: 'road Surface', color: new itowns.THREE.Color(0.4,  0.4,  0.7), opacity: 1.0 },
-                    12: { visible: true, name: 'overlap', color: new itowns.THREE.Color(1.0,  1.0,  0.0), opacity: 1.0 },
-                    DEFAULT: { visible: true, name: 'default', color: new itowns.THREE.Color(0.3,  0.6,  0.6), opacity: 0.5 },
-                },
-            }, view);
 
-            contextXR.pointLayer.addEventListener(
-                itowns.C3DTILES_LAYER_EVENTS.ON_TILE_CONTENT_LOADED,
-                updatePointCloudSize,
+            const source = new itowns.OGC3DTilesSource({ url: "https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json" });
+            contextXR.pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
+                source,
+
+            },);
+
+            view.addLayer(
+                contextXR.pointLayer
             );
             var geodesic  = view.controls.getCameraCoordinate();
             var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
@@ -145,12 +122,12 @@
             contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
 
             // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
-            itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
+            // itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
 
             // add building layer
 
             var buildingsSource = new itowns.VectorTilesSource({
-            style: 'https://wxs.ign.fr/essentiels/static/vectorTiles/styles/PLAN.IGN/standard.json',
+            style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
             // Filter to get only buildings
             filter: (layer) => {
                 return layer['source-layer'].includes('bati_surf')
@@ -175,13 +152,6 @@
         view.addLayer(buildingsLayer);
 
 
-            function updatePointCloudSize({tileContent}) {
-                tileContent.traverse(function (obj) {
-                    if (obj.isPoints) {
-                        obj.material.size = 200.0;
-                    }
-                });
-            }
 
 
             // ------------- webxr interaction ----------------
@@ -294,7 +264,7 @@
                     var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25, true);
                     XRUtils.generateVRBox(testPickingBbox);
                     // contextXR.interactiveLayers.push(testPickingBbox);
-                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes); 
+                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes);
 
                    // const orbitControls = new itowns.THREE.OrbitControls( view.controls.camera, contextXR.renderer.domElement );
                    // orbitControls.target = gltf.centor vector
@@ -426,7 +396,7 @@
                     if(view.meshPointer){
                         view.meshPointer.visible = false;
                     }
-                    
+
                     XRUtils.showPosition('pointsIntersections', intersectionVector, 0xfeff00, view.camera.camera3D.position.distanceTo(intersectionVector) / 100, false);
                 }
                 else {
@@ -440,7 +410,7 @@
                         view.meshPointer.position.copy(coordIntersectedMappedOnLayer.coord.as(view.referenceCrs));
                     }
                 }
-                
+
             }
 
             function getJumpCoordinate(intersectionCoord) {

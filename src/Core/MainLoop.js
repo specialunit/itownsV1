@@ -196,7 +196,7 @@ class MainLoop extends EventDispatcher {
         // Note: this is required at least because WEBGLRenderer calls
         // camera.updateMatrixWorld()
         const oldAutoUpdate = view.camera3D.matrixAutoUpdate;
-        view.camera3D.matrixAutoUpdate = false;
+        view.camera3D.matrixAutoUpdate = true;
 
         // update data-structure
         this.#update(view, updateSources, dt);

@@ -16,7 +16,7 @@ async function shutdownXR(session) {
  */
 const initializeWebXR = (view, options) => {
     const scale = options.scale || 1.0;
-
+    let xrControllers = null;
     const xr = view.mainLoop.gfxEngine.renderer.xr;
 
     xr.addEventListener('sessionstart', () => {
@@ -42,11 +42,10 @@ const initializeWebXR = (view, options) => {
         view.scene.scale.multiplyScalar(scale);
         view.scene.updateMatrixWorld();
 
-        const xrControllers = initControllers(xr, vrHeadSet);
+        xrControllers = initControllers(xr, vrHeadSet);
 
         const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
         // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
-        view.scene.add(vrHeadSet);
 
 
 
@@ -60,18 +59,46 @@ const initializeWebXR = (view, options) => {
         const trans = camera.position.clone().multiplyScalar(-scale).applyQuaternion(quat);
         const transform = new XRRigidTransform(trans, quat);
         // here position seems ok {x: 4485948.637198923, y: 476198.0416370128, z: 4497216.056600053, w: 1}
-        const baseReferenceSpace = xr.getReferenceSpace();
-        const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
-        // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
+        // const baseReferenceSpace = xr.getReferenceSpace();
+        // const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
+        // // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
 
-        // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
-        setTimeout(() => {
-             xr.setReferenceSpace(teleportSpaceOffset);
-             // does a regression over controller matrixWorld update...
-         });
+        // // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
+        // setTimeout(() => {
+        //      xr.setReferenceSpace(teleportSpaceOffset);
+        //      // does a regression over controller matrixWorld update...
+        //  });
+
+// Update the camera's position directly without using XRRigidTransform
+        vrHeadSet.position.copy(position);
+
+        // Apply the same rotation to the VR headset (vrHeadSet)
+        // vrHeadSet.rotation.copy(quat);
+
+// Now apply the position and rotation to the controllers
+        xrControllers.left.position.copy(vrHeadSet.position);
+        xrControllers.right.position.copy(vrHeadSet.position);
+
+// Apply the same rotation to the controllers
+        xrControllers.left.rotation.copy(vrHeadSet.rotation);
+        xrControllers.right.rotation.copy(vrHeadSet.rotation);
+
+// Update the reference space for XR session
+//         const baseReferenceSpace = xr.getReferenceSpace();
+//         xr.setReferenceSpace(baseReferenceSpace);
+        view.scene.add(vrHeadSet);
+
+        view.scene.updateMatrixWorld();
+
+
         view.notifyChange();
 
+        // const baseReferenceSpace = xr.getReferenceSpace();
+        // const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
+        // xr.setReferenceSpace(teleportSpaceOffset);
         view.camera.camera3D = xr.getCamera();
+        view.notifyChange();
+
         view.camera.camera3D.far = 100;
         view.camera.resize(view.camera.width, view.camera.height);
         vrHeadSet.add(view.camera.camera3D);
@@ -104,6 +131,7 @@ const initializeWebXR = (view, options) => {
                 }
 
                 view.notifyChange(view.camera.camera3D, true);
+
             }
 
             view.mainLoop.step(view, timestamp);
@@ -185,8 +213,8 @@ const initializeWebXR = (view, options) => {
         leftGripController.name = 'leftGripController';
         const rightGripController = webXRManager.getControllerGrip(1);
         rightGripController.name = 'rightGripController';
-        // bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
-        // bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
+        bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
+        bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
         vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
         return { left: leftController, right: rightController };
     }
