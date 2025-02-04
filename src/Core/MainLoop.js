@@ -196,7 +196,7 @@ class MainLoop extends EventDispatcher {
         // Note: this is required at least because WEBGLRenderer calls
         // camera.updateMatrixWorld()
         const oldAutoUpdate = view.camera3D.matrixAutoUpdate;
-        view.camera3D.matrixAutoUpdate = true;
+        view.camera3D.matrixAutoUpdate = false;
 
         // update data-structure
         this.#update(view, updateSources, dt);
@@ -210,9 +210,9 @@ class MainLoop extends EventDispatcher {
         // view.notifyChange() is called with redraw=true)
         // As such there's no continuous update-loop, instead we use a ad-hoc update/render
         // mechanism.
-        if (willRedraw) {
+        // if (willRedraw) {
             this.#renderView(view, dt);
-        }
+        // }
 
         // next time, we'll consider that we've just started the loop if we are still PAUSED now
         this.#updateLoopRestarted = this.renderingState === RENDERING_PAUSED;

@@ -82,10 +82,6 @@
             // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
             view.scene.matrixWorldAutoUpdate = true;
 
-            // Instantiate three's VR Button
-            const vrButton = VRButton.createButton(view.renderer);
-            viewerDiv.appendChild(vrButton);
-
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);
             var menuGlobe = new GuiTools('menuDiv', view, 300);
@@ -94,7 +90,7 @@
 
             // Add one imagery layer to the scene. This layer's properties are
             // defined in a json file, but it could be defined as a plain js
-            // object. See `Layer` documentation for more info.
+            // // object. See `Layer` documentation for more info.
             itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then((config) => {
                 config.source = new itowns.WMTSSource(config.source);
                 view.addLayer(
@@ -109,17 +105,18 @@
             const source = new itowns.OGC3DTilesSource({ url: "https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json" });
             contextXR.pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
                 source,
+                pntsSizeMode:1
 
             },);
 
             view.addLayer(
                 contextXR.pointLayer
             );
-            var geodesic  = view.controls.getCameraCoordinate();
-            var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
+            // var geodesic  = view.controls.getCameraCoordinate();
+            // var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
 
-            contextXR.pointLayer.object3d.position.add(deltaPointCloud);
-            contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
+            // contextXR.pointLayer.object3d.position.add(deltaPointCloud);
+            // contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
 
             // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
             // itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
@@ -247,7 +244,8 @@
             function initXR() {
                 contextXR.renderer = view.mainLoop.gfxEngine.renderer;
                 Controllers.addControllers(view, contextXR);
-
+                contextXR.renderer.xr.enabled = true;
+                return;
                 addXRObjects();
 
                  contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
@@ -442,32 +440,32 @@
 
             function addMeshToScene() {
                 // creation of the new mesh (a cylinder)
-                var THREE = itowns.THREE;
-                var geometry = new THREE.CylinderGeometry(0, 10, 60, 8);
-                var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                var meshPointer = new THREE.Mesh(geometry, material);
+                // var THREE = itowns.THREE;
+                // var geometry = new THREE.CylinderGeometry(0, 10, 60, 8);
+                // var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+                // var meshPointer = new THREE.Mesh(geometry, material);
 
                 // get the position on the globe, from the camera
                 var cameraTargetPosition = view.controls.getLookAtCoordinate();
 
-                // position of the mesh
-                var meshCoord = cameraTargetPosition.clone();
-                meshCoord.altitude += 30;
-
-                // position and orientation of the mesh
-                meshPointer.position.copy(meshCoord.as(view.referenceCrs));
-                meshPointer.lookAt(new THREE.Vector3(0, 0, 0));
-                meshPointer.rotateX(Math.PI / 2);
-
-                // update coordinate of the mesh
-                meshPointer.updateMatrixWorld();
+                // // position of the mesh
+                // var meshCoord = cameraTargetPosition.clone();
+                // meshCoord.altitude += 30;
+                //
+                // // position and orientation of the mesh
+                // meshPointer.position.copy(meshCoord.as(view.referenceCrs));
+                // meshPointer.lookAt(new THREE.Vector3(0, 0, 0));
+                // meshPointer.rotateX(Math.PI / 2);
+                //
+                // // update coordinate of the mesh
+                // meshPointer.updateMatrixWorld();
 
                 // add the mesh to the scene
-                view.scene.add(meshPointer);
+                // view.scene.add(meshPointer);
 
                 // make the object usable from outside of the function
-                view.meshPointer = meshPointer;
-                view.notifyChange();
+                // view.meshPointer = meshPointer;
+                // view.notifyChange();
             }
 
             // Listen for globe full initialisation event
@@ -475,12 +473,19 @@
             view.addEventListener(itowns.GLOBE_VIEW_EVENTS.GLOBE_INITIALIZED, function globeInitialized() {
                 // eslint-disable-next-line no-console
                 console.info('Globe initialized');
+                //
+                // // Instantiate three's VR Button
+                // const vrButton = VRButton.createButton(view.renderer);
+                // viewerDiv.appendChild(vrButton);
 
 
                addMeshToScene();
             });
 
 
+            // Instantiate three's VR Button
+            const vrButton = VRButton.createButton(view.renderer);
+            viewerDiv.appendChild(vrButton);
 
 
             // Add the UI Debug
@@ -496,7 +501,7 @@
             // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
 
             // Add two elevation layers, each with a different level of detail. Here again, each layer's properties are
-            // defined in a json file.
+            // // defined in a json file.
             function addElevationLayerFromConfig(config) {
                 config.source = new itowns.WMTSSource(config.source);
                 var elevationLayer = new itowns.ElevationLayer(config.id, config);

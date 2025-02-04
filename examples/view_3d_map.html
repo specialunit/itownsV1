@@ -12,7 +12,14 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
     </head>
     <body>
-        <div id="viewerDiv"></div>
+    <button id="aviewerDiv" onclick="teleport()" style="
+    position: absolute;
+    width: 50;
+    height: 50;
+    left: 50%;
+    z-index: 50;
+"></button>
+    <div id="viewerDiv"></div>
 
         <!-- Import iTowns source code -->
         <script src="../dist/itowns.js"></script>
@@ -32,9 +39,24 @@
 
             // Define camera initial position
             const placement = {
-                coord: new itowns.Coordinates('EPSG:4326', 2.351323, 48.856712),
-                range: 25000000,
+                // coord: new itowns.Coordinates('EPSG:4326', 2.351323, 48.856712),
+                coord: new itowns.Coordinates('EPSG:4978', 44891.121470811, 4770.22721133975, 44989.354518597),
+
+                range: 25000,
             }
+            // const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4413284.5, -18949.275390625, 4589538.5); // 4412106.042879028, -26370.61912189091, 4590341.467693916);
+            // const placement = {
+            //     coord: tile3DCoordinates,
+            //     range: 1000,
+            //     tilt: 5,
+            //     heading: 110,
+            //     /**
+            //      range: 15000,
+            //      tilt: 5,
+            //      heading: 62,
+            //      */
+            // };
+
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
@@ -150,6 +172,52 @@
             });
 
             debug.createTileDebugUI(debugMenu.gui, view);
+
+
+            function teleport(){
+                const vrHeadSet = new itowns.THREE.Object3D();
+                vrHeadSet.name = 'xrHeadset';
+
+                // var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
+                vrHeadSet.add(view.camera.camera3D);
+                view.camera.camera3D.position.set(0, 0, 0);
+                // view.camera.camera3D.quaternion.set(0, 0, 0, 0);
+
+                view.camera.camera3D.updateMatrixWorld( true );
+
+                view.scene.add(vrHeadSet);
+
+                // const pos = gltf.scene.position - vrHeadSet.position;
+                vrHeadSet.position.set(
+                        4503953.439758569,
+                        479712.07593785436,
+                        4513482.469775174
+
+                );
+                // vrHeadSet.quaternion.set( 0.2590934653167545,
+                //     0.288154738368961,
+                //     0.6855084851355708,
+                //     0.6163728902156602);
+
+                //
+                // gltf.scene.getWorldPosition(vrHeadSet.position);
+                // gltf.scene.getWorldQuaternion(vrHeadSet.quaternion);
+                //
+
+
+                vrHeadSet.updateMatrixWorld( true );
+                view.camera.camera3D.updateMatrixWorld( true );
+
+                view.notifyChange(view);
+
+
+
+
+
+
+            }
+
+
 
         </script>
     </body>

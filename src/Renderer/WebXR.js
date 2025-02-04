@@ -54,7 +54,7 @@ const initializeWebXR = (view, options) => {
         //
 
 
-        // xr.getReferenceSpace('local');
+        xr.getReferenceSpace('local');
 
         // const geodesicNormal = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.geodesicNormal);
         // // // const geodesicNormal = position.geodesicNormal;
@@ -116,11 +116,19 @@ const initializeWebXR = (view, options) => {
         // // vrHeadSet.updateMatrix( true );
         // // vrHeadSet.updateMatrixWorld( true );
         //
-        view.camera.camera3D.far = 2000000;
-        view.camera.camera3D.near = 0.1;
-        view.camera.camera3D.updateMatrixWorld( true );
+        // view.camera.camera3D.far = 2000000;
+        // view.camera.camera3D.near = 0.1;
+        view.camera.camera3D.updateMatrixWorld(true);
+
 
         view.camXR = view.camera.camera3D.clone();      // placeholder camera to initialize correctly the vr, which needs a parent
+        // view.camera.camera3D.fov = xr.getCamera().fov;
+        // view.camXR.far = 100;
+        // view.camera.resize(view.camera.width, view.camera.height);
+        view.camXR.far = 2000000;
+        view.camXR.near = 0.1;
+        view.camXR.updateMatrixWorld(true);
+        view.camXR.position.set(new THREE.Vector3());
         vrHeadSet.add(view.camXR);
 
         // vrHeadSet.add(view.camera.camera3D);
@@ -140,68 +148,87 @@ const initializeWebXR = (view, options) => {
 
         // document.addEventListener('keydown', exitXRSession, false);
         // view.notifyChange();
+        // setTimeout(() => {
+        //     view.controls.getLookAtCoordinate();
+        //
+        // });
+
+        // let init = true;
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
-                // const views = xr.getFrame().getViewerPose(xr.getReferenceSpace()).views;
-                // for (let i = 0; i < views.length; i++) {
-                //     // const view1 = views[i];
-                //     // view.camera.camera3D.getWorldPosition(view1.transform.position);
-                //     // view.camera.camera3D.getWorldQuaternion(view1.transform.orientation);
-                //     // view1.transform = view.camera.camera3D.matrix;
-                // }
-
-                //
-                // // view.camera.camera3D = xr.getCamera().cameras[0];
-                xr.getCamera().updateMatrixWorld( true );
+                xr.getCamera().updateMatrixWorld(true);
 
                 //  update itowns Camera
-                xr.getCamera().getWorldPosition(view.camera.camera3D.position);
-                xr.getCamera().getWorldQuaternion(view.camera.camera3D.quaternion);
+                // xr.getCamera().getWorldPosition(view.camera.camera3D.position);
+                // xr.getCamera().getWorldQuaternion(view.camera.camera3D.quaternion);
+                xr.getCamera().getWorldPosition(view.camera3D.position);
+                xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
+                //
+                view.camera3D.near = xr.getCamera().near;
+                view.camera3D.far = xr.getCamera().far;
+                view.camera3D.fov = xr.getCamera().fov;
+                view.camera3D.aspect = xr.getCamera().aspect;
+
+                view.camera3D.projectionMatrix.copy(xr.getCamera().projectionMatrix);
+                view.camera3D.updateProjectionMatrix();
+                // const tempPos = new THREE.Vector3();
+                // xr.getCamera().getWorldPosition(tempPos);
+                //
+
+                // view.camera3D.matrix.copy(xr.getCamera().matrixWorld);
+                // view.camera3D.matrixWorld.copy(xr.getCamera().matrixWorld);
+                // const posT = new Vector3();
+                // xr.getCamera().getWorldPosition(posT);
+                // view.camera3D.lookAt(posT);
+                // Update the local transformation matrix for the object itself
+                view.camera3D.updateMatrix();
+                //
+                // // Update the world transformation matrix, ensuring it reflects global transforms
+                view.camera3D.updateMatrixWorld(true);
+
+
+
+                // xr.getCamera().getWorldQuaternion(view.camera.camera3D.rotation);
+
                 // view.camXR.getWorldPosition(view.camera.camera3D.position);
                 // view.camXR.getWorldQuaternion(view.camera.camera3D.quaternion);
-                view.camera.camera3D.updateMatrixWorld( true );
+                // view.camera.camera3D.updateMatrixWorld(true);
+                // view.camera3D.updateMatrixWorld(true);
 
 
-                xr.getCamera().cameras[0].updateMatrixWorld( true );
-                xr.getCamera().cameras[1].updateMatrixWorld( true );
+                // // view.camera.camera3D = xr.getCamera().cameras[0];
+
+
+
                 if (xrControllers.left) {
                     listenGamepad(xrControllers.left);
                 }
                 if (xrControllers.right) {
-
                     listenGamepad(xrControllers.right);
                 }
-
+                //
                 resyncControlCamera();
-                //
-                // view.camera.camera3D.matrix.copy( matrixWorld );
-                //
-                //
-                //
-                //
-                // view.camera.camera3D.matrix.decompose( camera.position, camera.quaternion, camera.scale );
-                // view.camera.camera3D.updateMatrixWorld( true );
-                //
-                if (view.scene.matrixWorldAutoUpdate === true) {
-                    view.scene.updateMatrixWorld();
-                }
-
+                // //
                 computeDistanceToGround();
                 updateFarDistance();
                 // if (options.callback) {
                 //     options.callback();
                 // }
                 //
-                // // view.camera.camera3D.getWorldPosition(vrHeadSet.position);
-                // // view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
-                // view.notifyChange(xr.getCamera()[0], true);
-                // view.notifyChange(xr.getCamera()[1], true);
-                // view.camera.camera3D.updateMatrixWorld();
+
+                if (view.scene.matrixWorldAutoUpdate === true) {
+                    view.scene.updateMatrixWorld();
+                }
+                //
                 view.notifyChange(vrHeadSet, true);
                 view.notifyChange(view.camera.camera3D, true);
+                // if (init) {
+                //     init = false;
+                //     view.controls.getLookAtCoordinate();
+                // }
             }
 
             view.mainLoop.step(view, timestamp);
