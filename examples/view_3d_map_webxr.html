@@ -123,30 +123,30 @@
 
             // add building layer
 
-            var buildingsSource = new itowns.VectorTilesSource({
-            style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
-            // Filter to get only buildings
-            filter: (layer) => {
-                return layer['source-layer'].includes('bati_surf')
-                    && layer.paint["fill-color"];
-            },
-        });
-
-        var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
-            source: buildingsSource,
-            zoom: {min: 15},
-            // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
-            // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
-            accurate: false,
-            style: new itowns.Style({
-                fill: {
-                    base_altitude: (p) => p.alti_sol || 0,
-                    extrusion_height: (p) => p.hauteur || 0
-                },
-            })
-        });
-
-        view.addLayer(buildingsLayer);
+        //     var buildingsSource = new itowns.VectorTilesSource({
+        //     style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
+        //     // Filter to get only buildings
+        //     filter: (layer) => {
+        //         return layer['source-layer'].includes('bati_surf')
+        //             && layer.paint["fill-color"];
+        //     },
+        // });
+        //
+        // var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
+        //     source: buildingsSource,
+        //     zoom: {min: 15},
+        //     // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
+        //     // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
+        //     accurate: false,
+        //     style: new itowns.Style({
+        //         fill: {
+        //             base_altitude: (p) => p.alti_sol || 0,
+        //             extrusion_height: (p) => p.hauteur || 0
+        //         },
+        //     })
+        // });
+        //
+        // view.addLayer(buildingsLayer);
 
 
 
@@ -446,7 +446,8 @@
                 // var meshPointer = new THREE.Mesh(geometry, material);
 
                 // get the position on the globe, from the camera
-                var cameraTargetPosition = view.controls.getLookAtCoordinate();
+                // var cameraTargetPosition = view.controls.getLookAtCoordinate();
+                view.controls.getLookAtCoordinate();
 
                 // // position of the mesh
                 // var meshCoord = cameraTargetPosition.clone();
@@ -502,14 +503,14 @@
 
             // Add two elevation layers, each with a different level of detail. Here again, each layer's properties are
             // // defined in a json file.
-            function addElevationLayerFromConfig(config) {
-                config.source = new itowns.WMTSSource(config.source);
-                var elevationLayer = new itowns.ElevationLayer(config.id, config);
-                view.addLayer(elevationLayer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
-            }
-            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
-            // must keep it, Failed to execute 'updateRenderState' on 'XRSession': Failed to read the 'depthFar' property from 'XRRenderStateInit': The provided double value is non-finite.
-            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+            // function addElevationLayerFromConfig(config) {
+            //     config.source = new itowns.WMTSSource(config.source);
+            //     var elevationLayer = new itowns.ElevationLayer(config.id, config);
+            //     view.addLayer(elevationLayer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
+            // }
+            // itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
+            // // must keep it, Failed to execute 'updateRenderState' on 'XRSession': Failed to read the 'depthFar' property from 'XRRenderStateInit': The provided double value is non-finite.
+            // itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
         </script>
     </body>
 </html>

@@ -31,99 +31,29 @@ const initializeWebXR = (view, options) => {
         vrHeadSet.name = 'xrHeadset';
 
         // view.scene.scale.multiplyScalar(scale);
-        // view.scene.updateMatrixWorld();
 
         const xrControllers = initControllers(xr, vrHeadSet);
 
-        const position = view.controls.getCameraCoordinate().as(view.referenceCrs);
         // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
         view.scene.add(vrHeadSet);
         view.camera.camera3D.updateMatrixWorld(true);
 
-        const matrixWorld = new Matrix4().copy(view.camera.camera3D.matrixWorld);
         //
         view.camera.camera3D.getWorldPosition(vrHeadSet.position);
         view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
-        // view.camera.camera3D.getWorldPosition(view.scene.position);
-        // view.camera.camera3D.getWorldQuaternion(view.scene.quaternion);
-        // view.scene.updateMatrixWorld( true );
-        // // vrHeadSet.matrixWorld.copy( matrixWorld.invert() );
-        //
-        //
-        // vrHeadSet.updateMatrixWorld( true );
-        //
+
 
 
         xr.getReferenceSpace('local');
 
-        // const geodesicNormal = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), position.geodesicNormal);
-        // // // const geodesicNormal = position.geodesicNormal;
-        // // const quat = new THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
-        // const quat = new THREE.Quaternion(0, 0, 0, 1).normalize();
-        // // // https://github.com/immersive-web/webxr/issues/1236 for high position value
-        // const trans = camera.position.clone().multiplyScalar(-scale).applyQuaternion(quat);
-        // const transform = new XRRigidTransform(trans, quat);
-        // const transform = new XRRigidTransform(new Vector3(4485948.637198923, 476198.0416370128, 4497216.056600053), quat);
-        // const mat2 = new Float64Array(transform.matrix);
-        // mat2[12] = 4485948.637198923;
-        // mat2[13] = 476198.0416370128;
-        // mat2[14] = 4497216.056600053;
-        // const transform2 = {};
-        // transform2.matrix = mat2;
 
-
-        // here position seems ok {x: 4485948.637198923, y: 476198.0416370128, z: 4497216.056600053, w: 1}
-        // const baseReferenceSpace = xr.getReferenceSpace();
-        // const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
-        // // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
-        //
-        // vrHeadSet.matrixWorld.copy( matrixWorld );
-        //
-        //
-        //
-        //
-        // vrHeadSet.matrix.decompose( camera.position, camera.quaternion, camera.scale );
-        // vrHeadSet.updateMatrixWorld( true );
-        // vrHeadSet.position.set(4485948.637198923, 476198.0416370128, 4497216.056600053);
-
-
-        // vrHeadSet.position.set(camera.position.x,camera.position.y, camera.position.z);
-        // vrHeadSet.quaternion.set(quat);
-        // vrHeadSet.updateMatrixWorld( true );
-
-        // // // // Must delay replacement to allow user listening to sessionstart to get original ReferenceSpace
-        // setTimeout(() => {
-        // const baseReferenceSpace = xr.getReferenceSpace();
-        // const teleportSpaceOffset = baseReferenceSpace.getOffsetReferenceSpace(transform);
-        //     // teleportSpaceOffset[Symbol(@@webxr-polyfill/XRReferenceSpace)].originOffset = transform2;
-        // // // there it is not anymore : originOffset Matrix is :  4485948.5, 476198.03125, 4497216
-        //     xr.setReferenceSpace(teleportSpaceOffset);
-        //
-        //     // does a regression over controller matrixWorld update...
-        // });
-
-        // view.camera.camera3D.getWorldPosition(xr.getCamera().position);
-        // view.camera.camera3D.getWorldQuaternion(xr.getCamera().quaternion);
-        // xr.getCamera().updateMatrixWorld( true );
-        // xr.getCamera().name = "alala"
-        // // view.camera.camera3D = xr.getCamera();
-        //
-        // // view.camera.cameraXR = xr.getCamera();
-        // //
         vrHeadSet.add(xr.getCamera());
-        // // xr.getCamera().matrixAutoUpdate = true;
-        // // xr.getCamera().updateMatrixWorld( true );
-        // // vrHeadSet.updateMatrix( true );
-        // // vrHeadSet.updateMatrixWorld( true );
-        //
-        // view.camera.camera3D.far = 2000000;
-        // view.camera.camera3D.near = 0.1;
+
         view.camera.camera3D.updateMatrixWorld(true);
 
 
         view.camXR = view.camera.camera3D.clone();      // placeholder camera to initialize correctly the vr, which needs a parent
-        // view.camera.camera3D.fov = xr.getCamera().fov;
-        // view.camXR.far = 100;
+
         // view.camera.resize(view.camera.width, view.camera.height);
         view.camXR.far = 2000000;
         view.camXR.near = 0.1;
@@ -131,29 +61,10 @@ const initializeWebXR = (view, options) => {
         view.camXR.position.set(new THREE.Vector3());
         vrHeadSet.add(view.camXR);
 
-        // vrHeadSet.add(view.camera.camera3D);
         //
         view.notifyChange();
 
-        // view.camera.camera3D.projectionMatrix.copy( cameraXR.projectionMatrix );
-        // view.camera.camera3D.projectionMatrixInverse.copy( cameraXR.projectionMatrixInverse );
 
-        // view.camera.resize(view.camera.width, view.camera.height);
-        // vrHeadSet.add(view.camera.camera3D);
-        // cameraGroup.add(view.camera.camera3D);
-        // view.scene.add(cameraGroup);
-        // cameraGroup.position.set(initpos.x, initpos.y, initpos.z);
-        // cameraGroup.rotation.set(0, 0, 0);
-        // cameraGroup.lookAt(0, 0, 0);
-
-        // document.addEventListener('keydown', exitXRSession, false);
-        // view.notifyChange();
-        // setTimeout(() => {
-        //     view.controls.getLookAtCoordinate();
-        //
-        // });
-
-        // let init = true;
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
@@ -174,32 +85,13 @@ const initializeWebXR = (view, options) => {
 
                 view.camera3D.projectionMatrix.copy(xr.getCamera().projectionMatrix);
                 view.camera3D.updateProjectionMatrix();
-                // const tempPos = new THREE.Vector3();
-                // xr.getCamera().getWorldPosition(tempPos);
-                //
 
-                // view.camera3D.matrix.copy(xr.getCamera().matrixWorld);
-                // view.camera3D.matrixWorld.copy(xr.getCamera().matrixWorld);
-                // const posT = new Vector3();
-                // xr.getCamera().getWorldPosition(posT);
-                // view.camera3D.lookAt(posT);
                 // Update the local transformation matrix for the object itself
                 view.camera3D.updateMatrix();
                 //
                 // // Update the world transformation matrix, ensuring it reflects global transforms
                 view.camera3D.updateMatrixWorld(true);
 
-
-
-                // xr.getCamera().getWorldQuaternion(view.camera.camera3D.rotation);
-
-                // view.camXR.getWorldPosition(view.camera.camera3D.position);
-                // view.camXR.getWorldQuaternion(view.camera.camera3D.quaternion);
-                // view.camera.camera3D.updateMatrixWorld(true);
-                // view.camera3D.updateMatrixWorld(true);
-
-
-                // // view.camera.camera3D = xr.getCamera().cameras[0];
 
 
 
@@ -214,10 +106,10 @@ const initializeWebXR = (view, options) => {
                 // //
                 computeDistanceToGround();
                 updateFarDistance();
-                // if (options.callback) {
-                //     options.callback();
-                // }
-                //
+                if (options.callback) {
+                    options.callback();
+                }
+
 
                 if (view.scene.matrixWorldAutoUpdate === true) {
                     view.scene.updateMatrixWorld();
@@ -233,8 +125,7 @@ const initializeWebXR = (view, options) => {
 
             view.mainLoop.step(view, timestamp);
         });
-        // });
-        // });
+
     });
 
     function resyncControlCamera() {

@@ -277,8 +277,6 @@ class OGC3DTilesLayer extends GeometryLayer {
         this.pntsSizeMode = pntsSizeMode;
         this.pntsMinAttenuatedSize = pntsMinAttenuatedSize;
         this.pntsMaxAttenuatedSize = pntsMaxAttenuatedSize;
-        this.initXR = true;
-        this.tasks = [];
         this.tilesRenderer = new TilesRenderer(this.source.url);
         if (config.source.isOGC3DTilesIonSource) {
             this.tilesRenderer.registerPlugin(new CesiumIonAuthPlugin({
@@ -314,17 +312,15 @@ class OGC3DTilesLayer extends GeometryLayer {
         if (config.sseThreshold) {
             this.sseThreshold = config.sseThreshold;
         }
+        // Used for custom schedule callbacks (VR)
+        this.tasks = [];
 
         const tilesSchedulingCB = (func) => {
             this.tasks.push(func);
         };
-
         // We set our scheduling callback for tiles downloading and parsing / important for VR
         this.tilesRenderer.downloadQueue.schedulingCallback = tilesSchedulingCB;
         this.tilesRenderer.parseQueue.schedulingCallback = tilesSchedulingCB;
-
-        this.tilesRenderer.lruCache.maxSize = 1200000;
-        this.tilesRenderer.lruCache.minSize = 90000;
     }
 
     /**
@@ -455,35 +451,8 @@ class OGC3DTilesLayer extends GeometryLayer {
         this.tasks.length = 0;
     }
     preUpdate(context) {
-        this.scale = 1119.6152422706632;    // context.camera._preSSE;
-        // console.log(this.scale);
-
-        if (this.initXR && context.view.renderer.xr && context.view.renderer.xr.getCamera() && context.view.renderer.xr.getCamera().cameras.length > 0) {
-        //     const leftCam = context.view.renderer.xr.getCamera().cameras[0];
-        //     this.tilesRenderer.cameras.forEach(c => this.tilesRenderer.deleteCamera(c));
-        //     this.tilesRenderer.setCamera(context.view.renderer.xr.getCamera());
-        //
-        //     // this.tilesRenderer.setResolutionFromRenderer(leftCam, context.view.renderer);
-        //     this.tilesRenderer.deleteCamera(context.view.camera3D);
-        //     if (leftCam) {
-        //         this.tilesRenderer.setResolution(context.view.renderer.xr.getCamera(), leftCam.viewport.z, leftCam.viewport.w);
-        //     }
-
-            // We define a custom scheduling callback to handle also active WebXR sessions
-            // const tilesSchedulingCB = (func) => {
-            //     this.tasks.push(func);
-            // };
-            //
-            // // We set our scheduling callback for tiles downloading and parsing
-            // this.tilesRenderer.downloadQueue.schedulingCallback = tilesSchedulingCB;
-            // this.tilesRenderer.parseQueue.schedulingCallback = tilesSchedulingCB;
-            //
-            // this.tilesRenderer.lruCache.maxSize = 1200000;
-            // this.tilesRenderer.lruCache.minSize = 90000;
-            this.initXR = false;
-        }
+        this.scale = context.camera._preSSE;
         this.handleTasks();
-
         this.tilesRenderer.update();
         return null; // don't return any element because 3d-tiles-renderer already updates them
     }
