@@ -38,27 +38,22 @@ const initializeWebXR = (view, options) => {
 
     const xr = view.renderer.xr;
     xr.addEventListener('sessionstart', () => {
-        const initpos = view.controls.getCameraCoordinate().as(view.referenceCrs);
-
-        // xr.enabled = true;
-
-
-
         const vrHeadSet = new THREE.Object3D();
         vrHeadSet.name = 'xrHeadset';
 
-        // view.scene.scale.multiplyScalar(2);
+        // view.scene.scale.multiplyScalar(scale);
 
         const xrControllers = initControllers(xr, vrHeadSet);
 
         // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
         view.scene.add(vrHeadSet);
-        view.camera.camera3D.updateMatrixWorld(true);
+        // view.camera.camera3D.updateMatrixWorld(true);
 
         //
         view.camera.camera3D.getWorldPosition(vrHeadSet.position);
         view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
 
+        vrHeadSet.updateMatrixWorld(true);
 
 
         xr.getReferenceSpace('local');
@@ -66,34 +61,47 @@ const initializeWebXR = (view, options) => {
 
         vrHeadSet.add(xr.getCamera());
 
-        view.camera.camera3D.updateMatrixWorld(true);
-
-
         view.camXR = view.camera.camera3D.clone();      // placeholder camera to initialize correctly the vr, which needs a parent
 
-        // view.camera.resize(view.camera.width, view.camera.height);
-        // view.camXR.far = 2000000;
-        // view.camXR.near = 0.1;
+
+        // Important to see the controllers -> maybe could be improved
+        view.camXR.far = 2000000;
+        view.camXR.near = 0.1;
+
         view.camXR.updateMatrixWorld(true);
         vrHeadSet.add(view.camXR);
 
-        //
         view.notifyChange();
 
-        let init = true;
+        const init = 0;
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
-                // if (init) {
-                    init = false;
-                    const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
-                    view.camera3D.near = near;
-                    view.camera3D.far = far;
-                    view.camera3D.aspect = aspect;
-                    view.camera3D.fov = fov;
-                    view.camera3D.updateProjectionMatrix();
+                // if (init === 0) {
+                //     init++;
+                //     // view.mainLoop.step(view, timestamp);
+                // } else if (init === 1) {
+                //     init++;
+                /* This is what's done in updateUserCamera the WebXRManager.js of threejs
+                 Update projectionMatrix, could be replaced by:
+                camera.projectionMatrix.copy( cameraXR.projectionMatrix );
+               camera.projectionMatrixInverse.copy( cameraXR.projectionMatrixInverse );
+                But it safer to also change all the attributes, in case of another call to updateProjectionMatrix
+                */
+
+                // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
+                // const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
+                const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(view.camXR.projectionMatrix);
+                view.camera3D.near = near;
+                view.camera3D.far = far;
+                view.camera3D.aspect = aspect;
+                view.camera3D.fov = fov;
+                view.camera3D.zoom = 1;
+                view.camera3D.updateProjectionMatrix();
+                // }
+                // init = false;
 
                 // }
 
@@ -116,23 +124,22 @@ const initializeWebXR = (view, options) => {
                     listenGamepad(xrControllers.right);
                 }
                 //
-                resyncControlCamera();
+                // resyncControlCamera();
                 // //
                 computeDistanceToGround();
-                updateFarDistance();
+                // updateFarDistance();
                 if (options.callback) {
                     options.callback();
                 }
 
-
-                if (view.scene.matrixWorldAutoUpdate === true) {
-                    view.scene.updateMatrixWorld();
-                }
+                //
+                // if (view.scene.matrixWorldAutoUpdate === true) {
+                //     view.scene.updateMatrixWorld();
+                // }
                 //
                 view.notifyChange(vrHeadSet, true);
                 view.notifyChange(view.camera.camera3D, true);
             }
-
             view.mainLoop.step(view, timestamp);
         });
     });
@@ -254,33 +261,6 @@ const initializeWebXR = (view, options) => {
         // vrHeadSet.add(controllerGrip1);
 
         vrHeadSet.add(gripController);
-    }
-
-    function buildController(data) {
-        const params = { geometry: {}, material: {} };
-        // let cameraTargetPosition = view.controls.getCameraCoordinate();
-        // let meshCoord = cameraTargetPosition;
-        // let projectedCoords = meshCoord.as(view.referenceCrs);
-
-        switch (data.targetRayMode) {
-            case 'tracked-pointer':
-                params.geometry = new THREE.BufferGeometry();
-
-                params.geometry.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, 0, 0, -view.camera.camera3D.far], 3));
-                params.geometry.setAttribute('color', new THREE.Float32BufferAttribute([1, 1, 1], 3));
-
-                params.material = new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending });
-                return new THREE.Line(params.geometry, params.material);
-
-            case 'gaze':
-                params.geometry = new THREE.RingGeometry(0.02, 0.04, 32).translate(0, 0, -1);
-                params.material = new THREE.MeshBasicMaterial({ opacity: 0.5, transparent: true });
-
-                // geometry.position.copy(meshCoord.as(view.referenceCrs));
-                return new THREE.Mesh(params.geometry, params.material);
-            default:
-                break;
-        }
     }
 };
 
