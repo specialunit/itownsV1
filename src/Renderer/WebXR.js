@@ -9,6 +9,23 @@ async function shutdownXR(session) {
         await session.end();
     }
 }
+function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
+    const m = projectionMatrix.elements;
+
+    // Extract near and far
+    const near = m[14] / (m[10] - 1);
+    const far = m[14] / (m[10] + 1);
+
+    // Extract vertical FOV
+    const fovY = 2 * Math.atan(1 / m[5]); // m[5] = 1 / tan(fovY / 2)
+    const fov = THREE.MathUtils.radToDeg(fovY); // Convert to degrees
+
+    // Extract aspect ratio
+    const aspect = m[5] / m[0]; // m[0] = 1 / (tan(fovY / 2) * aspect)
+
+    return { near, far, aspect, fov };
+}
+
 
 /**
  *
@@ -30,7 +47,7 @@ const initializeWebXR = (view, options) => {
         const vrHeadSet = new THREE.Object3D();
         vrHeadSet.name = 'xrHeadset';
 
-        // view.scene.scale.multiplyScalar(scale);
+        // view.scene.scale.multiplyScalar(2);
 
         const xrControllers = initControllers(xr, vrHeadSet);
 
@@ -55,42 +72,35 @@ const initializeWebXR = (view, options) => {
         view.camXR = view.camera.camera3D.clone();      // placeholder camera to initialize correctly the vr, which needs a parent
 
         // view.camera.resize(view.camera.width, view.camera.height);
-        view.camXR.far = 2000000;
-        view.camXR.near = 0.1;
+        // view.camXR.far = 2000000;
+        // view.camXR.near = 0.1;
         view.camXR.updateMatrixWorld(true);
-        view.camXR.position.set(new THREE.Vector3());
         vrHeadSet.add(view.camXR);
 
         //
         view.notifyChange();
 
-
+        // let init = true;
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
-                xr.getCamera().updateMatrixWorld(true);
-
-                //  update itowns Camera
-                // xr.getCamera().getWorldPosition(view.camera.camera3D.position);
-                // xr.getCamera().getWorldQuaternion(view.camera.camera3D.quaternion);
                 xr.getCamera().getWorldPosition(view.camera3D.position);
                 xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
-                //
-                view.camera3D.near = xr.getCamera().near;
-                view.camera3D.far = xr.getCamera().far;
-                view.camera3D.fov = xr.getCamera().fov;
-                view.camera3D.aspect = xr.getCamera().aspect;
 
-                view.camera3D.projectionMatrix.copy(xr.getCamera().projectionMatrix);
+                const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
+                view.camera3D.near = near;
+                view.camera3D.far = far;
+                view.camera3D.aspect = aspect;
+                view.camera3D.fov = fov;
                 view.camera3D.updateProjectionMatrix();
-
-                // Update the local transformation matrix for the object itself
-                view.camera3D.updateMatrix();
                 //
-                // // Update the world transformation matrix, ensuring it reflects global transforms
-                view.camera3D.updateMatrixWorld(true);
+                // // Update the local transformation matrix for the object itself
+                // view.camera3D.updateMatrix();
+                // //
+                // // // Update the world transformation matrix, ensuring it reflects global transforms
+                // view.camera3D.updateMatrixWorld(true);
 
 
 
@@ -115,17 +125,18 @@ const initializeWebXR = (view, options) => {
                     view.scene.updateMatrixWorld();
                 }
                 //
-                view.notifyChange(vrHeadSet, true);
-                view.notifyChange(view.camera.camera3D, true);
-                // if (init) {
-                //     init = false;
-                //     view.controls.getLookAtCoordinate();
+                // view.notifyChange(vrHeadSet, true);
+                // view.notifyChange(view.camera.camera3D, true);
+                // if (!init) {
+                //     // init = false;
+                //     // view.controls.getLookAtCoordinate();
+                //     view.camXR = view.camera3D;
                 // }
+                // init = false;
             }
 
             view.mainLoop.step(view, timestamp);
         });
-
     });
 
     function resyncControlCamera() {
