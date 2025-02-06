@@ -96,11 +96,11 @@ const initializeWebXR = (view, options) => {
                 view.camera3D.fov = fov;
                 view.camera3D.updateProjectionMatrix();
                 //
-                // // Update the local transformation matrix for the object itself
-                // view.camera3D.updateMatrix();
-                // //
-                // // // Update the world transformation matrix, ensuring it reflects global transforms
-                // view.camera3D.updateMatrixWorld(true);
+                // Update the local transformation matrix for the object itself
+                view.camera3D.updateMatrix();
+                //
+                // // Update the world transformation matrix, ensuring it reflects global transforms
+                view.camera3D.updateMatrixWorld(true);
 
 
 
@@ -125,8 +125,8 @@ const initializeWebXR = (view, options) => {
                     view.scene.updateMatrixWorld();
                 }
                 //
-                // view.notifyChange(vrHeadSet, true);
-                // view.notifyChange(view.camera.camera3D, true);
+                view.notifyChange(vrHeadSet, true);
+                view.notifyChange(view.camera.camera3D, true);
                 // if (!init) {
                 //     // init = false;
                 //     // view.controls.getLookAtCoordinate();
