@@ -2,7 +2,7 @@
     <head>
         <meta charset="UTF-8">
 
-        <title>Itowns - COPC loader</title>
+        <title>Itowns - COPC simple loader</title>
 
         <link rel="stylesheet" type="text/css" href="css/example.css">
         <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
@@ -35,17 +35,20 @@
         <script src="../dist/debug.js"></script>
         <script type="text/javascript">
             let layer; // COPCLayer
+            let view;
+            let control;
 
-            const uri = new URL(location);
-
-            const gui = new dat.GUI();
+            const crs = {
+                'autzen-classified': 'EPSG:2992',
+                sofi: 'EPSG:32611',
+                millsite: 'EPSG:6341',
+            }
 
             const viewerDiv = document.getElementById('viewerDiv');
-            const view = new itowns.View('EPSG:4326', viewerDiv);
-            const controls = new itowns.PlanarControls(view);
-            view.mainLoop.gfxEngine.renderer.setClearColor(0xdddddd);
+            gui = new dat.GUI();
 
-            setUrl(uri.searchParams.get('copc'));
+            const uri = new URL(location);
+            setView(uri.searchParams.get('copc'));
 
             function onLayerReady(layer) {
                 const camera = view.camera.camera3D;
@@ -69,7 +72,6 @@
                 view.notifyChange(camera);
             }
 
-
             function readURL() {
                 const url = document.getElementById('copc_url').value;
 
@@ -88,9 +90,17 @@
                 history.replaceState(null, null, `?${uri.searchParams.toString()}`);
 
                 input_url.value = url;
-                load(url);
+                location.reload()
             }
 
+            function setView(url) {
+                const copcId = url.split('/').pop().split('.').shift();
+
+                view = new itowns.View(crs[copcId], viewerDiv);
+                controls = new itowns.PlanarControls(view);
+                view.mainLoop.gfxEngine.renderer.setClearColor(0xdddddd);
+                load(url);
+            }
 
             function load(url) {
                 const options = {};
@@ -101,13 +111,6 @@
                     }
                 });
                 const source = new itowns.CopcSource({ url });
-
-                if (layer) {
-                    gui.removeFolder(layer.debugUI);
-                    view.removeLayer('COPC');
-                    view.notifyChange();
-                    layer.delete();
-                }
 
                 const config = {
                     source,
