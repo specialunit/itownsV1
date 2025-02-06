@@ -80,30 +80,34 @@ const initializeWebXR = (view, options) => {
         //
         view.notifyChange();
 
-        // let init = true;
+        let init = true;
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
+                // if (init) {
+                    init = false;
+                    const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
+                    view.camera3D.near = near;
+                    view.camera3D.far = far;
+                    view.camera3D.aspect = aspect;
+                    view.camera3D.fov = fov;
+                    view.camera3D.updateProjectionMatrix();
+
+                // }
+
                 xr.getCamera().getWorldPosition(view.camera3D.position);
                 xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
 
-                const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
-                view.camera3D.near = near;
-                view.camera3D.far = far;
-                view.camera3D.aspect = aspect;
-                view.camera3D.fov = fov;
-                view.camera3D.updateProjectionMatrix();
+
+
                 //
                 // Update the local transformation matrix for the object itself
                 view.camera3D.updateMatrix();
                 //
                 // // Update the world transformation matrix, ensuring it reflects global transforms
                 view.camera3D.updateMatrixWorld(true);
-
-
-
 
                 if (xrControllers.left) {
                     listenGamepad(xrControllers.left);
@@ -127,12 +131,6 @@ const initializeWebXR = (view, options) => {
                 //
                 view.notifyChange(vrHeadSet, true);
                 view.notifyChange(view.camera.camera3D, true);
-                // if (!init) {
-                //     // init = false;
-                //     // view.controls.getLookAtCoordinate();
-                //     view.camXR = view.camera3D;
-                // }
-                // init = false;
             }
 
             view.mainLoop.step(view, timestamp);
