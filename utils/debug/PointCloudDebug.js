@@ -1,73 +1,55 @@
 import { PNTS_MODE, PNTS_SHAPE, PNTS_SIZE_MODE } from 'Renderer/PointsMaterial';
 
+const folderName = 'Styling';
+
 function getController(gui, name) {
-    let controller = null;
-    const controllers = gui.__folders.Styling.__controllers;
-    for (let i = 0; i < controllers.length; i += 1) {
-        const c = controllers[i];
-        if (c.property === name || c.name === name) {
-            controller = c;
-            break;
-        }
-    }
+    const controllers = gui.folders.filter(f => f._title === folderName)[0].controllers;
+    const controller = controllers.filter(c => (c.property === name || c.name === name))[0];
     return controller;
-}
-
-function hideController(gui, name) {
-    const controller = getController(gui, name);
-    if (controller) {
-        controller.__li.style.display = 'none';
-    }
-}
-
-function showController(gui, name) {
-    const controller = getController(gui, name);
-    if (controller) {
-        controller.__li.style.display = '';
-    }
 }
 
 function setupControllerVisibily(gui, displayMode, sizeMode) {
     displayMode =  parseInt(displayMode, 10);
     if ([PNTS_MODE.INTENSITY, PNTS_MODE.ELEVATION, PNTS_MODE.SCAN_ANGLE].includes(displayMode)) {
-        showController(gui, 'gradient');
+        getController(gui, 'gradient').show();
     } else {
-        hideController(gui, 'gradient');
+        getController(gui, 'gradient').hide();
     }
     if (PNTS_MODE.INTENSITY === displayMode) {
-        showController(gui, 'minIntensityRange');
-        showController(gui, 'maxIntensityRange');
+        getController(gui, 'minIntensityRange').show();
+        getController(gui, 'maxIntensityRange').show();
     } else {
-        hideController(gui, 'minIntensityRange');
-        hideController(gui, 'maxIntensityRange');
+        getController(gui, 'minIntensityRange').hide();
+        getController(gui, 'maxIntensityRange').hide();
     }
     if (PNTS_MODE.ELEVATION === displayMode) {
-        showController(gui, 'minElevationRange');
-        showController(gui, 'maxElevationRange');
+        getController(gui, 'minElevationRange').show();
+        getController(gui, 'maxElevationRange').show();
     } else {
-        hideController(gui, 'minElevationRange');
-        hideController(gui, 'maxElevationRange');
+        getController(gui, 'minElevationRange').hide();
+        getController(gui, 'maxElevationRange').hide();
     }
     if (PNTS_MODE.SCAN_ANGLE === displayMode) {
-        showController(gui, 'minAngleRange');
-        showController(gui, 'maxAngleRange');
+        getController(gui, 'minAngleRange').show();
+        getController(gui, 'maxAngleRange').show();
     } else {
-        hideController(gui, 'minAngleRange');
-        hideController(gui, 'maxAngleRange');
+        getController(gui, 'minAngleRange').hide();
+        getController(gui, 'maxAngleRange').hide();
     }
 
     sizeMode =  parseInt(sizeMode, 10);
     if (sizeMode === PNTS_SIZE_MODE.VALUE) {
-        hideController(gui, 'minAttenuatedSize');
-        hideController(gui, 'maxAttenuatedSize');
+        getController(gui, 'minAttenuatedSize').hide();
+        getController(gui, 'maxAttenuatedSize').hide();
     } else {
-        showController(gui, 'minAttenuatedSize');
-        showController(gui, 'maxAttenuatedSize');
+        getController(gui, 'minAttenuatedSize').show();
+        getController(gui, 'maxAttenuatedSize').show();
     }
 }
 
 export default {
     initTools(view, layer, datUi) {
+        datUi.title('Layer Controls');
         layer.debugUI = datUi.addFolder(`${layer.id}`);
 
         const update = () => {
@@ -89,7 +71,7 @@ export default {
         layer.dbgDisplayChildren = true;
         layer.dbgDisplayParents = true;
 
-        const styleUI = layer.debugUI.addFolder('Styling');
+        const styleUI = layer.debugUI.addFolder(folderName).close();
         if (layer.material.mode != undefined) {
             const modeNames = Object.keys(PNTS_MODE);
             const mode = modeNames.filter(v => PNTS_MODE[v] === layer.material.mode)[0];
@@ -98,6 +80,16 @@ export default {
                     layer.material.mode = PNTS_MODE[value];
                     update();
                 });
+
+            const classeUI = styleUI.addFolder('Classe Visibility').close();
+            Object.entries(layer.material.classificationScheme).forEach((classe) => {
+                classeUI.add(classe[1], 'visible').name(classe[1].name)
+                    .onChange(() => {
+                        layer.material.recomputeVisibleTexture();
+                        update();
+                    });
+            });
+
             const gradiantsNames = Object.keys(layer.material.gradients);
             styleUI.add({ gradient: gradiantsNames[0] }, 'gradient', gradiantsNames).name('gradient')
                 .onChange((value) => {
@@ -184,7 +176,7 @@ export default {
         }
 
         // UI
-        const debugUI = layer.debugUI.addFolder('Debug');
+        const debugUI = layer.debugUI.addFolder('Debug').close();
         debugUI.add(layer.bboxes, 'visible').name('Display Bounding Boxes').onChange(update);
         debugUI.add(layer, 'dbgStickyNode').name('Sticky node name').onChange(update);
         debugUI.add(layer, 'dbgDisplaySticky').name('Display sticky node').onChange(update);

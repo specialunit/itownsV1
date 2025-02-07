@@ -15,7 +15,7 @@
         </style>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19"></script>
     </head>
     <body>
         <div id="description">Specify the URL of a COPC file to load:
@@ -38,7 +38,7 @@
 
             const uri = new URL(location);
 
-            const gui = new dat.GUI();
+            const gui = new lil.GUI();
 
             const viewerDiv = document.getElementById('viewerDiv');
             const view = new itowns.View('EPSG:4326', viewerDiv);
@@ -103,7 +103,7 @@
                 const source = new itowns.CopcSource({ url });
 
                 if (layer) {
-                    gui.removeFolder(layer.debugUI);
+                    layer.debugUI.destroy()
                     view.removeLayer('COPC');
                     view.notifyChange();
                     layer.delete();

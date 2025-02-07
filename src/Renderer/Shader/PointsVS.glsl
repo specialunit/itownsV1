@@ -10,7 +10,7 @@ varying vec4 vColor; // color_pars_vertex
     uniform mat3 uvTransform;
 #endif
 
-#define NB_CLASS 8.
+#define SOURCE_ID_GROUP 8.
 
 uniform float size;
 uniform float scale;
@@ -25,6 +25,8 @@ uniform vec2 angleRange;
 uniform sampler2D classificationTexture;
 uniform sampler2D discreteTexture;
 uniform sampler2D gradientTexture;
+uniform sampler2D visiTexture;
+
 uniform int sizeMode;
 uniform float minAttenuatedSize;
 uniform float maxAttenuatedSize;
@@ -39,12 +41,13 @@ attribute float numberOfReturns;
 attribute float scanAngle;
 
 void main() {
+    vec2 uv = vec2(classification/255., 0.5);
+
     vColor = vec4(1.0);
     if (picking) {
         vColor = unique_id;
     } else {
         if (mode == PNTS_MODE_CLASSIFICATION) {
-            vec2 uv = vec2(classification/255., 0.5);
             vColor = texture2D(classificationTexture, uv);
         } else if (mode == PNTS_MODE_NORMAL) {
             vColor.rgb = abs(normal);
@@ -84,7 +87,7 @@ void main() {
             vec2 uv = vec2(numberOfReturns/255., 0.5);
             vColor = texture2D(discreteTexture, uv);
         } else if (mode == PNTS_MODE_POINT_SOURCE_ID) {
-            vec2 uv = vec2(mod(pointSourceID, NB_CLASS)/255., 0.5);
+            vec2 uv = vec2(mod(pointSourceID, SOURCE_ID_GROUP)/255., 0.5);
             vColor = texture2D(discreteTexture, uv);
         } else if (mode == PNTS_MODE_SCAN_ANGLE) {
             float i = (scanAngle - angleRange.x) / (angleRange.y - angleRange.x);
@@ -100,6 +103,10 @@ void main() {
             vec2 uv = vec2(i, (1. - i));
             vColor = texture2D(gradientTexture, uv);
         }
+    }
+
+    if (texture2D(visiTexture, uv).r == 0.) {
+        vColor.a = 0.;
     }
 
 #define USE_COLOR_ALPHA

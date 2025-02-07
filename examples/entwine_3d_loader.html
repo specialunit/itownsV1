@@ -14,7 +14,7 @@
         </style>
 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lil-gui@0.19"></script>
     </head>
     <body>
         <div id="description">Specify the URL of a Entwine Point Tree to load:
@@ -31,7 +31,7 @@
         <script src="js/GUI/LoadingScreen.js"></script>
         <script src="../dist/debug.js"></script>
         <script type="text/javascript">
-            var debugGui = new dat.GUI();
+            var debugGui = new lil.GUI();
             var viewerDiv = document.getElementById('viewerDiv');
 
             var view = new itowns.GlobeView(viewerDiv);

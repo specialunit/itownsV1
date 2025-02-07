@@ -241,7 +241,7 @@ class PointCloudLayer extends GeometryLayer {
         if (this.material) {
             this.material.visible = this.visible;
             this.material.opacity = this.opacity;
-            this.material.transparent = this.opacity < 1 || this.material.userData.needTransparency[this.material.mode];
+            this.material.depthWrite = false;
             this.material.size = this.pointSize;
             this.material.scale = context.camera.preSSE;
             if (this.material.updateUniforms) {
