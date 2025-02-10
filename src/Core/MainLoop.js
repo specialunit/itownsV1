@@ -28,53 +28,6 @@ export const MAIN_LOOP_EVENTS = {
     UPDATE_END: 'update_end',
 };
 
-function updateElements(context, geometryLayer, elements) {
-    if (!elements) {
-        return;
-    }
-    for (const element of elements) {
-        // update element
-        // TODO find a way to notify attachedLayers when geometryLayer deletes some elements
-        // and then update Debug.js:addGeometryLayerDebugFeatures
-        const newElementsToUpdate = geometryLayer.update(context, geometryLayer, element);
-
-        const sub = geometryLayer.getObjectToUpdateForAttachedLayers(element);
-
-        if (sub) {
-            if (sub.element) {
-                if (__DEBUG__) {
-                    if (!(sub.element.isObject3D)) {
-                        throw new Error(`
-                            Invalid object for attached layer to update.
-                            Must be a THREE.Object and have a THREE.Material`);
-                    }
-                }
-                // update attached layers
-                for (const attachedLayer of geometryLayer.attachedLayers) {
-                    if (attachedLayer.ready) {
-                        attachedLayer.update(context, attachedLayer, sub.element, sub.parent);
-                    }
-                }
-            } else if (sub.elements) {
-                for (let i = 0; i < sub.elements.length; i++) {
-                    if (!(sub.elements[i].isObject3D)) {
-                        throw new Error(`
-                            Invalid object for attached layer to update.
-                            Must be a THREE.Object and have a THREE.Material`);
-                    }
-                    // update attached layers
-                    for (const attachedLayer of geometryLayer.attachedLayers) {
-                        if (attachedLayer.ready) {
-                            attachedLayer.update(context, attachedLayer, sub.elements[i], sub.parent);
-                        }
-                    }
-                }
-            }
-        }
-        updateElements(context, geometryLayer, newElementsToUpdate);
-    }
-}
-
 function filterChangeSources(updateSources, geometryLayer) {
     let fullUpdate = false;
     const filtered = new Set();
@@ -150,12 +103,8 @@ class MainLoop extends EventDispatcher {
                             attachedLayer.preUpdate(context, srcs);
                         }
                     }
-                    // `preUpdate` returns an array of elements to update
-                    const elementsToUpdate = geometryLayer.preUpdate(context, srcs);
-                    // `update` is called in `updateElements`.
-                    updateElements(context, geometryLayer, elementsToUpdate);
-                    // `postUpdate` is called when this geom layer update process is finished
-                    geometryLayer.postUpdate(context, geometryLayer, updateSources);
+
+                    geometryLayer.updateAll(context, srcs);
                 }
 
                 // Clear the cache of expired resources

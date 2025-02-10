@@ -267,6 +267,62 @@ class Layer extends THREE.EventDispatcher {
         }
     }
 
+    updateAll(context, srcs) {
+        const elementsToUpdate = this.preUpdate(context, srcs);
+        // `update` is called in `updateElements`.
+        this.updateElements(context, elementsToUpdate);
+        // `postUpdate` is called when this geom layer update process is finished
+        this.postUpdate(context, this, elementsToUpdate);
+    }
+
+    updateElements(context, elements) {
+        console.log('Layer.updateElements');
+        if (!elements) {
+            return;
+        }
+        for (const element of elements) {
+            // update element
+            // TODO find a way to notify attachedLayers when geometryLayer deletes some elements
+            // and then update Debug.js:addGeometryLayerDebugFeatures
+            const newElementsToUpdate = this.update(context, this, element);
+
+            const sub = this.getObjectToUpdateForAttachedLayers(element);
+
+            if (sub) {
+                if (sub.element) {
+                    if (__DEBUG__) {
+                        if (!(sub.element.isObject3D)) {
+                            throw new Error(`
+                                Invalid object for attached layer to update.
+                                Must be a THREE.Object and have a THREE.Material`);
+                        }
+                    }
+                    // update attached layers
+                    for (const attachedLayer of this.attachedLayers) {
+                        if (attachedLayer.ready) {
+                            attachedLayer.update(context, attachedLayer, sub.element, sub.parent);
+                        }
+                    }
+                } else if (sub.elements) {
+                    for (let i = 0; i < sub.elements.length; i++) {
+                        if (!(sub.elements[i].isObject3D)) {
+                            throw new Error(`
+                                Invalid object for attached layer to update.
+                                Must be a THREE.Object and have a THREE.Material`);
+                        }
+                        // update attached layers
+                        for (const attachedLayer of this.attachedLayers) {
+                            if (attachedLayer.ready) {
+                                attachedLayer.update(context, attachedLayer, sub.elements[i], sub.parent);
+                            }
+                        }
+                    }
+                }
+            }
+            this.updateElements(context, newElementsToUpdate);
+        }
+    }
+
     // Placeholder
     // eslint-disable-next-line
     convert(data) {
