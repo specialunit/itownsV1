@@ -76,14 +76,25 @@ Controllers.addControllers = (_view, _contextXR) => {
     cache.isFixedPosition = false;
 };
 
+
 Controllers.getGeodesicalQuaternion = () => {
-    // TODO can be optimized with better cache
+    // Get the camera's coordinate in the reference CRS.
     const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
-    // const position = new itowns.Coordinates('EPSG:4978', renderer.xr.getCamera().position).as('EPSG:4326').clone().as(view.referenceCrs);
-    const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
-    return new itowns.THREE.Quaternion(1, 0, 0, 1).normalize().multiply(geodesicNormal);
-    // return view.camera.camera3D.quaternion.clone();
+
+    // Compute a quaternion that rotates the default up vector (0, 0, 1)
+    // to match the local geodesic normal. Invert the result.
+    const geodesicQuat = new itowns.THREE.Quaternion()
+        .setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal)
+        .invert();
+
+    // Define a 90° rotation about the Z-axis (using -90° here).
+    const rotation90 = new itowns.THREE.Quaternion()
+        .setFromAxisAngle(new itowns.THREE.Vector3(0, 0, 1), -Math.PI / 2);
+
+    // Combine the geodesic alignment with the 90° rotation.
+    return geodesicQuat.multiply(rotation90);
 };
+
 
 function bindListeners(index) {
     return renderer.xr.getController(index);
@@ -351,19 +362,42 @@ function switchRegisteredCoordinates() {
 
 
 // ////////////////////////////////// MODE 1
-
+//
+// function getRotationYaw(axisValue) {
+//     const offsetRotation = Controllers.getGeodesicalQuaternion();
+//
+//     if (axisValue) {
+//         deltaRotation += Math.PI * axisValue / (140);
+//         // console.log('rotY: ', deltaRotation);
+//     }
+//
+//     const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationZ(deltaRotation);
+//     const rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
+//     offsetRotation.premultiply(rotationQuartenion);
+//     return offsetRotation;
+// }
 function getRotationYaw(axisValue) {
-    const offsetRotation = Controllers.getGeodesicalQuaternion();
+    // Get the base orientation, which already aligns the camera with the local geodesic up
+    const baseOrientation = Controllers.getGeodesicalQuaternion();
 
+    // Update the cumulative yaw rotation based on the controller’s axis input.
+    // (Adjust the factor as needed to control sensitivity.)
     if (axisValue) {
-        deltaRotation += Math.PI * axisValue / (140);
-        // console.log('rotY: ', deltaRotation);
+        deltaRotation += Math.PI * axisValue / 140;
     }
 
-    const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationZ(deltaRotation);
-    const rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
-    offsetRotation.premultiply(rotationQuartenion);
-    return offsetRotation;
+    // Get the local “up” direction from the camera coordinate.
+    const cameraCoordinate = view.controls.getCameraCoordinate();
+    const upAxis = cameraCoordinate.geodesicNormal.clone().normalize();
+
+    // Create a quaternion that represents a yaw (left/right) rotation about the local up axis.
+    const yawQuaternion = new itowns.THREE.Quaternion().setFromAxisAngle(upAxis, deltaRotation).normalize();
+
+    // Apply the yaw rotation to the base orientation.
+    // Here, premultiply means the yaw is applied before the geodesic alignment.
+    baseOrientation.premultiply(yawQuaternion);
+
+    return baseOrientation;
 }
 
 function getTranslationElevation(axisValue, speedFactor) {
