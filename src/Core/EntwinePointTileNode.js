@@ -69,16 +69,16 @@ class EntwinePointTileNode extends PointCloudNode {
         this.url = `${this.layer.source.url}/ept-data/${this.id}.${this.layer.source.extension}`;
     }
 
-    createChildAABB(node) {
+    createChildAABB(childNode) {
         // factor to apply, based on the depth difference (can be > 1)
-        const f = 2 ** (node.depth - this.depth);
+        const f = 2 ** (childNode.depth - this.depth);
 
         // size of the child node bbox (Vector3), based on the size of the
         // parent node, and divided by the factor
         this.bbox.getSize(size).divideScalar(f);
 
         // initialize the child node bbox at the location of the parent node bbox
-        node.bbox.min.copy(this.bbox.min);
+        childNode.bbox.min.copy(this.bbox.min);
 
         // position of the parent node, if it was at the same depth than the
         // child, found by multiplying the tree position by the factor
@@ -86,13 +86,29 @@ class EntwinePointTileNode extends PointCloudNode {
 
         // difference in position between the two nodes, at child depth, and
         // scale it using the size
-        translation.subVectors(node, position).multiply(size);
+        translation.subVectors(childNode, position).multiply(size);
 
         // apply the translation to the child node bbox
-        node.bbox.min.add(translation);
+        childNode.bbox.min.add(translation);
 
         // use the size computed above to set the max
-        node.bbox.max.copy(node.bbox.min).add(size);
+        childNode.bbox.max.copy(childNode.bbox.min).add(size);
+    }
+
+    createChildOBB(childNode) {
+        const f = 2 ** (childNode.depth - this.depth);
+
+        this.obb.getSize(size).divideScalar(f);
+
+        position.copy(this).multiplyScalar(f);
+
+        translation.subVectors(childNode, position).multiply(size);
+
+        childNode.obb = this.obb.clone();
+        childNode.obb.halfSize.divideScalar(f);
+
+        childNode.obb.center = this.obb.center.clone().add(this.obb.halfSize.clone().multiplyScalar(-0.5)).add(translation);
+        childNode.obb.position = this.obb.position.clone();
     }
 
     get octreeIsLoaded() {
@@ -100,29 +116,30 @@ class EntwinePointTileNode extends PointCloudNode {
     }
 
     loadOctree() {
-        return Fetcher.json(`${this.layer.source.url}/ept-hierarchy/${this.id}.json`, this.layer.source.networkOptions).then((hierarchy) => {
-            this.numPoints = hierarchy[this.id];
+        return Fetcher.json(`${this.layer.source.url}/ept-hierarchy/${this.id}.json`, this.layer.source.networkOptions)
+            .then((hierarchy) => {
+                this.numPoints = hierarchy[this.id];
 
-            const stack = [];
-            stack.push(this);
+                const stack = [];
+                stack.push(this);
 
-            while (stack.length) {
-                const node = stack.shift();
-                const depth = node.depth + 1;
-                const x = node.x * 2;
-                const y = node.y * 2;
-                const z = node.z * 2;
+                while (stack.length) {
+                    const node = stack.shift();
+                    const depth = node.depth + 1;
+                    const x = node.x * 2;
+                    const y = node.y * 2;
+                    const z = node.z * 2;
 
-                node.findAndCreateChild(depth, x,     y,     z,     hierarchy, stack);
-                node.findAndCreateChild(depth, x + 1, y,     z,     hierarchy, stack);
-                node.findAndCreateChild(depth, x,     y + 1, z,     hierarchy, stack);
-                node.findAndCreateChild(depth, x + 1, y + 1, z,     hierarchy, stack);
-                node.findAndCreateChild(depth, x,     y,     z + 1, hierarchy, stack);
-                node.findAndCreateChild(depth, x + 1, y,     z + 1, hierarchy, stack);
-                node.findAndCreateChild(depth, x,     y + 1, z + 1, hierarchy, stack);
-                node.findAndCreateChild(depth, x + 1, y + 1, z + 1, hierarchy, stack);
-            }
-        });
+                    node.findAndCreateChild(depth, x,     y,     z,     hierarchy, stack);
+                    node.findAndCreateChild(depth, x + 1, y,     z,     hierarchy, stack);
+                    node.findAndCreateChild(depth, x,     y + 1, z,     hierarchy, stack);
+                    node.findAndCreateChild(depth, x + 1, y + 1, z,     hierarchy, stack);
+                    node.findAndCreateChild(depth, x,     y,     z + 1, hierarchy, stack);
+                    node.findAndCreateChild(depth, x + 1, y,     z + 1, hierarchy, stack);
+                    node.findAndCreateChild(depth, x,     y + 1, z + 1, hierarchy, stack);
+                    node.findAndCreateChild(depth, x + 1, y + 1, z + 1, hierarchy, stack);
+                }
+            });
     }
 
     findAndCreateChild(depth, x, y, z, hierarchy, stack) {

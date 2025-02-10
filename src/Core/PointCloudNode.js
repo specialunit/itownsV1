@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OBB } from 'ThreeExtended/math/OBB';
 
 class PointCloudNode extends THREE.EventDispatcher {
     constructor(numPoints = 0, layer) {
@@ -9,13 +10,15 @@ class PointCloudNode extends THREE.EventDispatcher {
 
         this.children = [];
         this.bbox = new THREE.Box3();
+        this.obb = new OBB();
         this.sse = -1;
     }
 
-    add(node, indexChild) {
-        this.children.push(node);
-        node.parent = this;
-        this.createChildAABB(node, indexChild);
+    add(childNode, indexChild) {
+        this.children.push(childNode);
+        childNode.parent = this;
+        this.createChildAABB(childNode, indexChild);
+        this.createChildOBB(childNode);
     }
 
     load() {

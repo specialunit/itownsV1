@@ -11,5 +11,6 @@ export default {
         './capabilities/WebGL.js',
         './libs/ktx-parse.module.js',
         './libs/zstddec.module.js',
+        './math/OBB.js',
     ],
 };

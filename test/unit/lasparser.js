@@ -35,7 +35,15 @@ describe('LASParser', function () {
 
         it('parses a las file to a THREE.BufferGeometry', async function () {
             if (!lasData) { this.skip(); }
-            const bufferGeometry = await LASParser.parse(lasData);
+            const options = {
+                in: {
+                    crs: 'EPSG:3857',
+                },
+                out: {
+                    crs: 'EPSG:3857',
+                },
+            };
+            const bufferGeometry = await LASParser.parse(lasData, options);
             const header = bufferGeometry.userData.header;
             const origin = bufferGeometry.userData.origin;
             assert.strictEqual(header.pointCount, 106);
@@ -44,6 +52,7 @@ describe('LASParser', function () {
             assert.strictEqual(bufferGeometry.attributes.classification.count, header.pointCount);
             assert.strictEqual(bufferGeometry.attributes.color, undefined);
 
+            bufferGeometry.computeBoundingBox();
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.x + origin.x, header.min[0], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.y + origin.y, header.min[1], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.z + origin.z, header.min[2], epsilon));
@@ -55,7 +64,15 @@ describe('LASParser', function () {
 
         it('parses a laz file to a THREE.BufferGeometry', async function () {
             if (!lazV14Data) { this.skip(); }
-            const bufferGeometry = await LASParser.parse(lazV14Data);
+            const options = {
+                in: {
+                    crs: 'EPSG:3857',
+                },
+                out: {
+                    crs: 'EPSG:3857',
+                },
+            };
+            const bufferGeometry = await LASParser.parse(lazV14Data, options);
             const header = bufferGeometry.userData.header;
             const origin = bufferGeometry.userData.origin;
             assert.strictEqual(header.pointCount, 100000);
@@ -64,6 +81,7 @@ describe('LASParser', function () {
             assert.strictEqual(bufferGeometry.attributes.classification.count, header.pointCount);
             assert.strictEqual(bufferGeometry.attributes.color.count, header.pointCount);
 
+            bufferGeometry.computeBoundingBox();
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.x + origin.x, header.min[0], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.y + origin.y, header.min[1], epsilon));
             assert.ok(compareWithEpsilon(bufferGeometry.boundingBox.min.z + origin.z, header.min[2], epsilon));
@@ -110,8 +128,12 @@ describe('LASParser', function () {
                 in: {
                     pointCount: header.pointCount,
                     header,
+                    // eb,
+                    crs: 'EPSG:3857',
                 },
-                // eb,
+                out: {
+                    crs: 'EPSG:3857',
+                },
             };
             const bufferGeometry = await LASParser.parseChunk(copcData, options);
 

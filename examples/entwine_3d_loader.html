@@ -20,8 +20,8 @@
         <div id="description">Specify the URL of a Entwine Point Tree to load:
             <input type="text" id="ept_url" />
             <button onclick="readEPTURL()">Load</button>
-            <p>If your dataset is not displaying at the right location,
-            check that it has been converted in <code>EPSG:4978</code>.</p>
+            <button onclick="loadGrandLyon()">Load the Grand Lyon
+                dataset</button>
             <div id="share"></div>
         </div>
         <div id="viewerDiv">
@@ -71,7 +71,8 @@
             }
 
             function readEPTURL() {
-                var url = document.getElementById('ept_url').value || new URL(location.href).searchParams.get('ept');
+                const urlParams = new URL(location.href).searchParams
+                var url = document.getElementById('ept_url').value || urlParams.get('ept');
 
                 if (url) {
                     loadEPT(url);
@@ -95,12 +96,17 @@
 
                 eptLayer = new itowns.EntwinePointTileLayer('Entwine Point Tile', {
                     source: eptSource,
-                    crs: view.referenceCrs,
                 });
 
                 itowns.View.prototype.addLayer.call(view, eptLayer).then(onLayerReady);
 
-                debug.PointCloudDebug.initTools(view, eptLayer, debugGui);
+                eptLayer.whenReady
+                    .then(() => debug.PointCloudDebug.initTools(view, eptLayer, debugGui));
+            }
+
+            function loadGrandLyon() {
+                document.getElementById('ept_url').value = 'https://download.data.grandlyon.com/files/grandlyon/imagerie/mnt2018/lidar/ept/';
+                readEPTURL();
             }
 
             readEPTURL();

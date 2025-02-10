@@ -31,12 +31,11 @@
         <script src="js/GUI/LoadingScreen.js"></script>
         <script src="../dist/debug.js"></script>
         <script type="text/javascript">
-            itowns.proj4.defs('EPSG:3946', '+proj=lcc +lat_0=46 +lon_0=3 +lat_1=45.25 +lat_2=46.75 +x_0=1700000 +y_0=5200000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs');
-
             var debugGui = new dat.GUI();
             var viewerDiv = document.getElementById('viewerDiv');
             viewerDiv.style.display = 'block';
-            var view = new itowns.View('EPSG:3946', viewerDiv);
+
+            var view = new itowns.View('EPSG:3857', viewerDiv);
             view.mainLoop.gfxEngine.renderer.setClearColor(0xcccccc);
 
             const controls = new itowns.PlanarControls(view);
@@ -52,7 +51,7 @@
                 view.camera3D.far = 2.0 * size.length();
 
                 controls.groundLevel = eptLayer.root.bbox.min.z;
-                var position = eptLayer.root.bbox.min.clone().add(
+                var position = eptLayer.root.bbox.max.clone().add(
                     size.multiply({ x: 0, y: 0, z: size.x / size.z })
                 );
 
@@ -96,7 +95,6 @@
 
                 const config = {
                     source: eptSource,
-                    crs: view.referenceCrs,
                     ...options,
                 }
                 eptLayer = new itowns.EntwinePointTileLayer('Entwine Point Tile', config);

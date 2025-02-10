@@ -1,0 +1,144 @@
+<html>
+    <head>
+        <title>Itowns - COPC 3D loader</title>
+
+        <meta charset="UTF-8">
+        <link rel="stylesheet" type="text/css" href="css/example.css">
+        <link rel="stylesheet" type="text/css" href="css/LoadingScreen.css">
+
+        <style type="text/css">
+            #description {
+                z-index: 2;
+                left: 10px;
+            }
+        </style>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
+    </head>
+    <body>
+        <div id="description">Specify the URL of a COPC file to load:
+            <input type="text" id="copc_url" />
+            <button onclick="readCopcURL()">Load</button>
+            <button onclick="loadLidarHD()">Load LiDAR HD dataset</button>
+            <div id="share"></div>
+        </div>
+        <div id="viewerDiv">
+        </div>
+
+        <script src="../dist/itowns.js"></script>
+        <script src="js/GUI/LoadingScreen.js"></script>
+        <script src="../dist/debug.js"></script>
+        <script type="text/javascript">
+            var debugGui = new dat.GUI();
+            var viewerDiv = document.getElementById('viewerDiv');
+
+            var view = new itowns.GlobeView(viewerDiv);
+
+            // Add one imagery layer to the scene and the miniView
+            // This layer is defined in a json file but it could be defined as a plain js
+            // object. See Layer* for more info.
+            itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then(function _(config) {
+                config.source = new itowns.WMTSSource(config.source);
+                var layer = new itowns.ColorLayer('Ortho', config);
+                view.addLayer(layer);
+            });
+            // Add two elevation layers.
+            // These will deform iTowns globe geometry to represent terrain elevation.
+            function addElevationLayerFromConfig(config) {
+                config.source = new itowns.WMTSSource(config.source);
+                var layer = new itowns.ElevationLayer(config.id, config);
+                view.addLayer(layer);
+            }
+            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
+            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+
+            var layer;
+
+            function onLayerReady() {
+                var lookAt = new itowns.THREE.Vector3();
+                layer.root.bbox.getCenter(lookAt);
+                var coordLookAt = new itowns.Coordinates(view.referenceCrs).setFromVector3(lookAt);
+
+                var size = new itowns.THREE.Vector3();
+                layer.root.bbox.getSize(size);
+
+                view.controls.lookAtCoordinate({
+                    coord: coordLookAt,
+                    range: 2 * size.length(),
+                }, false);
+            }
+
+            function readCopcURL() {
+                const urlParams = new URL(location.href).searchParams
+                var url = document.getElementById('copc_url').value || urlParams.get('copc');
+
+                if (url) {
+                    const options = {};
+                    urlParams.keys().forEach(key => {
+                        if (key !== 'copc') {
+                            if (key.includes('.')) {
+                                params = key.split('.');
+                                let object = options;
+                                params.forEach((subKey, index) => {
+                                    if (!object[subKey]) { object[subKey] = {}; }
+                                    if (index === params.length - 1) {
+                                        object[subKey] = parseFloat(urlParams.get(key));
+                                    }
+                                    object = object[subKey];
+                                })
+                            } else {
+                                options[key] = parseFloat(urlParams.get(key));
+                            }
+                            
+                        }
+                    });
+                    loadCopc(url, options);
+
+                    document.getElementById('share').innerHTML = '<a href="' +
+                        location.href.replace(location.search, '?copc=' + url) +
+                        '" target="_blank">Link to share this view</a>';
+                    document.getElementById('copc_url').value = url;
+                }
+            }
+
+            function loadCopc(url, options) {
+                const source = new itowns.CopcSource({ url });
+
+                if (layer) {
+                    debugGui.removeFolder(layer.debugUI);
+                    view.removeLayer('COPC');
+                    view.notifyChange();
+                    layer.delete();
+                }
+
+                const config = {
+                    source,
+                    crs: view.referenceCrs,
+                    sseThreshold: 2,
+                    pointBudget: 3000000,
+                    ...options,
+                }
+
+                layer = new itowns.CopcLayer('COPC', config);
+
+                itowns.View.prototype.addLayer.call(view, layer).then(onLayerReady);
+
+                layer.whenReady
+                    .then(() => debug.PointCloudDebug.initTools(view, layer, debugGui));
+            }
+
+            function loadLidarHD() {
+                // const url ="https://storage.sbg.cloud.ovh.net/v1/AUTH_63234f509d6048bca3c9fd7928720ca1/ppk-lidar/ML/LHD_FXX_0746_6509_PTS_C_LAMB93_IGN69.copc.laz"
+                const url ="https://dl-lidar.ign.fr/ppk-lidar/ML/LHD_FXX_0746_6509_PTS_C_LAMB93_IGN69.copc.laz" //fixed with proxy
+                const options = {
+                    material: {mode: 2},
+                    opacity: 0.5,
+                }
+                loadCopc(url, options);
+            }
+
+            readCopcURL();
+        </script>
+    </body>
+</html>

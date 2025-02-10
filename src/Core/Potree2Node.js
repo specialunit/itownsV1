@@ -100,6 +100,12 @@ class Potree2Node extends PointCloudNode {
         }
     }
 
+    createChildOBB(childNode) {
+        // to check if it's enought
+        childNode.obb.fromBox3(childNode.bbox);
+        childNode.obb.position = new THREE.Vector3();
+    }
+
     get octreeIsLoaded() {
         return !(this.childrenBitField && this.children.length === 0);
     }

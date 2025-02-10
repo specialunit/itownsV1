@@ -1,5 +1,6 @@
 import { LazPerf } from 'laz-perf';
 import { Las } from 'copc';
+import proj4 from 'proj4';
 
 /**
  * @typedef {Object} Header - Partial LAS header.
@@ -47,7 +48,12 @@ class LASLoader {
     }
 
     _parseView(view, options) {
-        const colorDepth = options.colorDepth ?? 16;
+        const colorDepth = options.colorDepth ?? defaultColorEncoding(options.header);
+
+        const forward = (options.in.crs !== options.out.crs) ?
+            proj4(options.in.projDefs, options.out.projDefs).forward :
+            (x => x);
+        const isGeocentric = options.out.projDefs.projName === 'geocent';
 
         const getPosition = ['X', 'Y', 'Z'].map(view.getter);
         const getIntensity = view.getter('Intensity');
@@ -60,6 +66,7 @@ class LASLoader {
         const getScanAngle = view.getter('ScanAngle');
 
         const positions = new Float32Array(view.pointCount * 3);
+        const elevations = new Float32Array(view.pointCount);
         const intensities = new Uint16Array(view.pointCount);
         const returnNumbers = new Uint8Array(view.pointCount);
         const numberOfReturns = new Uint8Array(view.pointCount);
@@ -75,17 +82,23 @@ class LASLoader {
         */
         const scanAngles = new Float32Array(view.pointCount);
 
-        // For precision we take the first point that will be use as origin for a local referentiel.
-        const origin = getPosition.map(f => f(0)).map(val => Math.floor(val));
+        // For precision we use the first point to define the origin for a local referentiel.
+        // After projection transformation and only the integer part for simplification.
+        const origin = forward(getPosition.map(f => f(0))).map(val => Math.floor(val));
 
         for (let i = 0; i < view.pointCount; i++) {
             // `getPosition` apply scale and offset transform to the X, Y, Z
             // values. See https://github.com/connormanning/copc.js/blob/master/src/las/extractor.ts.
-            const [x, y, z] = getPosition.map(f => f(i));
+            // we thus apply the projection to get values in the Crs of the view.
+            const point = getPosition.map(f => f(i));
+            const [x, y, z] = forward(point);
             positions[i * 3] = x - origin[0];
             positions[i * 3 + 1] = y - origin[1];
             positions[i * 3 + 2] = z - origin[2];
 
+            elevations[i] = z;
+            // geocentric height to elevation
+            if (isGeocentric) { elevations[i] = point[2]; }
             intensities[i] = getIntensity(i);
             returnNumbers[i] = getReturnNumber(i);
             numberOfReturns[i] = getNumberOfReturns(i);
@@ -115,6 +128,7 @@ class LASLoader {
 
         return {
             position: positions,
+            elevation: elevations,
             intensity: intensities,
             returnNumber: returnNumbers,
             numberOfReturns,
@@ -153,8 +167,6 @@ class LASLoader {
         const { header, eb, pointCount } = options;
         const { pointDataRecordFormat, pointDataRecordLength } = header;
 
-        const colorDepth = options.colorDepth ?? defaultColorEncoding(header);
-
         const bytes = new Uint8Array(data);
         const pointData = await Las.PointData.decompressChunk(bytes, {
             pointCount,
@@ -163,7 +175,7 @@ class LASLoader {
         }, this._initDecoder());
 
         const view = Las.View.create(pointData, header, eb);
-        const attributes = this._parseView(view, { colorDepth });
+        const attributes = this._parseView(view, options);
         return { attributes };
     }
 
@@ -182,7 +194,7 @@ class LASLoader {
         const pointData = await Las.PointData.decompressFile(bytes, this._initDecoder());
 
         const header = Las.Header.parse(bytes);
-        const colorDepth = options.colorDepth ?? defaultColorEncoding(header);
+        options.header = header;
 
         const getter = async (begin, end) => bytes.slice(begin, end);
         const vlrs = await Las.Vlr.walk(getter, header);
@@ -190,7 +202,7 @@ class LASLoader {
         const eb = ebVlr && Las.ExtraBytes.parse(await Las.Vlr.fetch(getter, ebVlr));
 
         const view = Las.View.create(pointData, header, eb);
-        const attributes = this._parseView(view, { colorDepth });
+        const attributes = this._parseView(view, options);
         return {
             header,
             attributes,

@@ -60,12 +60,13 @@
                 view.mainLoop.gfxEngine.renderer.setClearColor(0xcccccc);
 
                 // Configure Point Cloud layer
-                potreeLayer = new itowns.PotreeLayer('eglise_saint_blaise_arles', {
-                    source: new itowns.PotreeSource({
+                const potreeSource = new itowns.PotreeSource({
                         file: 'eglise_saint_blaise_arles.js',
                         url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/eglise_saint_blaise_arles',
-                        crs: view.referenceCrs,
-                    }),
+                        crs: 'EPSG:3946',
+                    });
+                potreeLayer = new itowns.PotreeLayer('eglise_saint_blaise_arles', {
+                    source: potreeSource,
                 });
 
                 // point selection on double-click

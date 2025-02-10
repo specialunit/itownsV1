@@ -17,16 +17,18 @@ describe('Potree2', function () {
 
     before(function () {
         renderer = new Renderer();
-        viewer = new View('EPSG:3946', renderer.domElement, { renderer });
+        viewer = new View('EPSG:4978', renderer.domElement, { renderer });
         viewer.camera.camera3D.position.copy(new Vector3(0, 0, 10));
 
         // Configure Point Cloud layer
+        const source = new Potree2Source({
+            file: 'metadata.json',
+            url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
+            networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
+            crs: 'EPSG:4978',
+        });
         potreeLayer = new Potree2Layer('lion', {
-            source: new Potree2Source({
-                file: 'metadata.json',
-                url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/potree2.0/lion',
-                networkOptions: process.env.HTTPS_PROXY ? { agent: new HttpsProxyAgent(process.env.HTTPS_PROXY) } : {},
-            }),
+            source,
             crs: viewer.referenceCrs,
         });
 

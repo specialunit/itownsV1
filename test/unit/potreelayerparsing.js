@@ -42,7 +42,8 @@ describe('Potree Provider', function () {
             it('cloud with no normal information', function _it(done) {
             // No normals
                 const cloud = {
-                    boundingBox: { lx: 0, ly: 1, ux: 2, uy: 3 },
+                    boundingBox: { lx: 10, ly: 20, ux: 30, uy: 40 },
+                    tightBoundingBox: { lx: 1, ly: 2, ux: 3, uy: 4 },
                     scale: 1.0,
                     pointAttributes: ['POSITION', 'RGB'],
                     octreeDir: 'data',
@@ -51,6 +52,7 @@ describe('Potree Provider', function () {
                 const source = new PotreeSource({
                     file: fileName,
                     url: baseurl,
+                    crs: 'EPSG:4978',
                     cloud,
                 });
 
@@ -66,7 +68,8 @@ describe('Potree Provider', function () {
             it('cloud with normals as vector', function _it(done) {
             // // // // normals as vector
                 const cloud = {
-                    boundingBox: { lx: 0, ly: 1, ux: 2, uy: 3 },
+                    boundingBox: { lx: 10, ly: 20, ux: 30, uy: 40 },
+                    tightBoundingBox: { lx: 1, ly: 2, ux: 3, uy: 4 },
                     scale: 1.0,
                     pointAttributes: ['POSITION', 'NORMAL', 'CLASSIFICATION'],
                     octreeDir: 'data',
@@ -75,6 +78,7 @@ describe('Potree Provider', function () {
                 const source = new PotreeSource({
                     file: fileName,
                     url: baseurl,
+                    crs: 'EPSG:4978',
                     cloud,
                 });
 
@@ -91,7 +95,8 @@ describe('Potree Provider', function () {
             it('cloud with spheremapped normals', function _it(done) {
             // // spheremapped normals
                 const cloud = {
-                    boundingBox: { lx: 0, ly: 1, ux: 2, uy: 3 },
+                    boundingBox: { lx: 10, ly: 20, ux: 30, uy: 40 },
+                    tightBoundingBox: { lx: 1, ly: 2, ux: 3, uy: 4 },
                     scale: 1.0,
                     pointAttributes: ['POSITION', 'COLOR_PACKED', 'NORMAL_SPHEREMAPPED'],
                     octreeDir: 'data',
@@ -99,6 +104,7 @@ describe('Potree Provider', function () {
                 const source = new PotreeSource({
                     file: fileName,
                     url: baseurl,
+                    crs: 'EPSG:4978',
                     cloud,
                 });
                 const layer = new PotreeLayer('pointsCloud3', { source, crs: view.referenceCrs });
@@ -115,7 +121,8 @@ describe('Potree Provider', function () {
             it('cloud with oct16 normals', function _it(done) {
             // // // oct16 normals
                 const cloud = {
-                    boundingBox: { lx: 0, ly: 1, ux: 2, uy: 3 },
+                    boundingBox: { lx: 10, ly: 20, ux: 30, uy: 40 },
+                    tightBoundingBox: { lx: 1, ly: 2, ux: 3, uy: 4 },
                     scale: 1.0,
                     pointAttributes: ['POSITION', 'COLOR_PACKED', 'CLASSIFICATION', 'NORMAL_OCT16'],
                     octreeDir: 'data',
@@ -123,6 +130,7 @@ describe('Potree Provider', function () {
                 const source = new PotreeSource({
                     file: fileName,
                     url: baseurl,
+                    crs: 'EPSG:4978',
                     cloud,
                 });
                 const layer = new PotreeLayer('pointsCloud4', { source, crs: view.referenceCrs });

@@ -103,8 +103,6 @@ export default {
             geometry.setAttribute(attr.attributeName, new THREE.BufferAttribute(array, attr.numElements, attr.normalized));
         }
 
-        geometry.computeBoundingBox();
-
         return Promise.resolve(geometry);
     },
 };

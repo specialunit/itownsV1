@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import Coordinates from 'Core/Geographic/Coordinates';
 import DEMUtils from 'Utils/DEMUtils';
+import { OBB } from 'ThreeExtended/math/OBB';
 
 /**
  * @typedef     {object}    Camera~CAMERA_TYPE
@@ -18,12 +19,16 @@ const tmp = {
     frustum: new THREE.Frustum(),
     matrix: new THREE.Matrix4(),
     box3: new THREE.Box3(),
+    obb: new OBB(),
 };
+
+const _vector3 = new THREE.Vector3();
 
 const ndcBox3 = new THREE.Box3(
     new THREE.Vector3(-1, -1, -1),
     new THREE.Vector3(1, 1, 1),
 );
+const ndcObb = new OBB().fromBox3(ndcBox3);
 
 function updatePreSse(camera, height, fov) {
     // sse = projected geometric error on screen plane from distance
@@ -207,6 +212,10 @@ class Camera {
         return this.box3SizeOnScreen(box3, matrixWorld).intersectsBox(ndcBox3);
     }
 
+    isObbVisible(obb, matrixWorld) {
+        return this.obbSizeOnScreen(obb, matrixWorld).intersectsOBB(ndcObb);
+    }
+
     isSphereVisible(sphere, matrixWorld) {
         if (this.#_viewMatrixNeedsUpdate) {
             // update visibility testing matrix
@@ -236,6 +245,23 @@ class Camera {
         }
 
         return tmp.box3.setFromPoints(pts);
+    }
+
+    obbSizeOnScreen(obb, matrixWorld) {
+        const pts = projectObbPointsInCameraSpace(this, obb, matrixWorld);
+
+        // All points are in front of the near plane -> box3 is invisible
+        if (!pts) {
+            tmp.obb.halfSize = _vector3;
+            return tmp.obb;
+        }
+
+        // Project points on screen
+        for (let i = 0; i < 8; i++) {
+            pts[i].applyMatrix4(this.camera3D.projectionMatrix);
+        }
+
+        return tmp.obb.fromBox3(tmp.box3.setFromPoints(pts));
     }
 
     /**
@@ -297,6 +323,62 @@ function projectBox3PointsInCameraSpace(camera, box3, matrixWorld) {
     points[5].set(box3.max.x, box3.min.y, box3.max.z).applyMatrix4(m);
     points[6].set(box3.max.x, box3.max.y, box3.min.z).applyMatrix4(m);
     points[7].set(box3.max.x, box3.max.y, box3.max.z).applyMatrix4(m);
+
+    // In camera space objects are along the -Z axis
+    // So if min.z is > -near, the object is invisible
+    let atLeastOneInFrontOfNearPlane = false;
+    for (let i = 0; i < 8; i++) {
+        if (points[i].z <= -camera.camera3D.near) {
+            atLeastOneInFrontOfNearPlane = true;
+        } else {
+            // Clamp to near plane
+            points[i].z = -camera.camera3D.near;
+        }
+    }
+
+    return atLeastOneInFrontOfNearPlane ? points : undefined;
+}
+
+function projectObbPointsInCameraSpace(camera, obb, matrixWorld) {
+    // Projects points in camera space
+    // We don't project directly on screen to avoid artifacts when projecting
+    // points behind the near plane.
+    let m = camera.camera3D.matrixWorldInverse;
+    if (matrixWorld) {
+        m = tmp.matrix.multiplyMatrices(camera.camera3D.matrixWorldInverse, matrixWorld);
+    }
+    points[0].set(obb.center.x + obb.halfSize.x, obb.center.y + obb.halfSize.y, obb.center.z + obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[1].set(obb.center.x + obb.halfSize.x, obb.center.y + obb.halfSize.y, obb.center.z - obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[2].set(obb.center.x + obb.halfSize.x, obb.center.y - obb.halfSize.y, obb.center.z + obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[3].set(obb.center.x + obb.halfSize.x, obb.center.y - obb.halfSize.y, obb.center.z - obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[4].set(obb.center.x - obb.halfSize.x, obb.center.y + obb.halfSize.y, obb.center.z + obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[5].set(obb.center.x - obb.halfSize.x, obb.center.y + obb.halfSize.y, obb.center.z - obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[6].set(obb.center.x - obb.halfSize.x, obb.center.y - obb.halfSize.y, obb.center.z + obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
+    points[7].set(obb.center.x - obb.halfSize.x, obb.center.y - obb.halfSize.y, obb.center.z - obb.halfSize.z)
+        .applyMatrix3(obb.rotation)
+        .add(obb.position)
+        .applyMatrix4(m);
 
     // In camera space objects are along the -Z axis
     // So if min.z is > -near, the object is invisible

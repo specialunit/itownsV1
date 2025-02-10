@@ -1,11 +1,8 @@
 import * as THREE from 'three';
 import PointCloudLayer from 'Layer/PointCloudLayer';
 import PotreeNode from 'Core/PotreeNode';
-import Extent from 'Core/Geographic/Extent';
-
-const bboxMesh = new THREE.Mesh();
-const box3 = new THREE.Box3();
-bboxMesh.geometry.boundingBox = box3;
+import Coordinates from 'Core/Geographic/Coordinates';
+import proj4 from 'proj4';
 
 /**
  * @property {boolean} isPotreeLayer - Used to checkout whether this layer
@@ -38,9 +35,6 @@ class PotreeLayer extends PointCloudLayer {
      * contains three elements `name, protocol, extent`, these elements will be
      * available using `layer.name` or something else depending on the property
      * name. See the list of properties to know which one can be specified.
-     * @param {string} [config.crs='ESPG:4326'] - The CRS of the {@link View} this
-     * layer will be attached to. This is used to determine the extent of this
-     * layer.  Default to `EPSG:4326`.
      */
     constructor(id, config) {
         super(id, config);
@@ -67,13 +61,85 @@ class PotreeLayer extends PointCloudLayer {
             this.supportsProgressiveDisplay = (this.source.extension === 'cin');
 
             this.root = new PotreeNode(0, 0, this);
-            this.root.bbox.min.set(cloud.boundingBox.lx, cloud.boundingBox.ly, cloud.boundingBox.lz);
-            this.root.bbox.max.set(cloud.boundingBox.ux, cloud.boundingBox.uy, cloud.boundingBox.uz);
 
-            this.minElevationRange = this.minElevationRange ?? cloud.boundingBox.lz;
-            this.maxElevationRange = this.maxElevationRange ?? cloud.boundingBox.uz;
+            let forward = (x => x);
+            if (this.source.crs !== this.crs) {
+                try {
+                    forward = proj4(this.source.crs, this.crs).forward;
+                } catch (err) {
+                    throw new Error(`${err} is not defined in proj4`);
+                }
+            }
 
-            this.extent = Extent.fromBox3(this.source.crs || 'EPSG:4326', this.root.bbox);
+            this.minElevationRange = this.minElevationRange ?? cloud.tightBoundingBox.lz; // cloud.boundingBox.lz;
+            this.maxElevationRange = this.maxElevationRange ?? cloud.tightBoundingBox.uz;
+
+            // for BBOX
+            const tightBounds = [
+                ...forward([cloud.tightBoundingBox.lx, cloud.tightBoundingBox.ly, cloud.tightBoundingBox.lz]),
+                ...forward([cloud.tightBoundingBox.ux, cloud.tightBoundingBox.uy, cloud.tightBoundingBox.uz]),
+            ];
+            this.clamp = {
+                zmin: tightBounds[2],
+                zmax: tightBounds[5],
+            };
+
+            const bounds = [
+                ...forward([cloud.boundingBox.lx, cloud.boundingBox.ly, cloud.boundingBox.lz]),
+                ...forward([cloud.boundingBox.ux, cloud.boundingBox.uy, cloud.boundingBox.uz]),
+            ];
+
+            this.root.bbox.setFromArray(bounds);
+
+            // for OBB
+            const centerZ0 = [
+                (cloud.tightBoundingBox.lx + cloud.tightBoundingBox.ux) * 0.5,
+                (cloud.tightBoundingBox.ly + cloud.tightBoundingBox.uy) * 0.5,
+                0,
+            ];
+
+            const geometry = new THREE.BufferGeometry();
+            const points = new THREE.Points(geometry);
+
+            const matrix = new THREE.Matrix4();
+            const matrixInverse = new THREE.Matrix4();
+
+            let origin = new Coordinates(this.source.crs, ...centerZ0);
+            if (this.crs === 'EPSG:4978') {
+                const axisZ = new THREE.Vector3(0, 0, 1);
+                const alignYtoEast = new THREE.Quaternion();
+                origin = origin.as('EPSG:4978');
+                const origin4326 = origin.as('EPSG:4326');
+
+                // align Z axe to geodesic normal.
+                points.quaternion.setFromUnitVectors(axisZ, origin.geodesicNormal);
+                // align Y axe to East
+                alignYtoEast.setFromAxisAngle(axisZ, THREE.MathUtils.degToRad(90 + origin4326.longitude));
+                points.quaternion.multiply(alignYtoEast);
+            }
+            points.updateMatrix();
+
+            matrix.copy(points.matrix);
+            matrixInverse.copy(matrix).invert();
+
+            // proj in repere local (apply rotation) to get obb from bbox
+            const boundsLocal = [];
+            for (let i = 0; i < bounds.length; i += 3) {
+                const coord = new THREE.Vector3(...bounds.slice(i, i + 3))
+                    .sub(origin.toVector3());
+                const coordlocal = coord.applyMatrix4(matrixInverse);
+                boundsLocal.push(...coordlocal);
+            }
+            const positionsArray = new Float32Array(boundsLocal);
+            const positionBuffer = new THREE.BufferAttribute(positionsArray, 3);
+            geometry.setAttribute('position', positionBuffer);
+
+            geometry.computeBoundingBox();
+
+            this.root.obb.fromBox3(geometry.boundingBox);
+            this.root.obb.applyMatrix4(matrix);
+            this.root.obb.position = origin.toVector3();
+
             return this.root.loadOctree().then(resolve);
         });
     }
