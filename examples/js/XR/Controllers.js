@@ -65,15 +65,8 @@ Controllers.addControllers = (_view, _contextXR) => {
     controller2.addEventListener( 'selectstart', onSelectRightStart);
     controller2.addEventListener( 'selectend', onSelectRightEnd);
 
-    const cameraRightCtrl = new itowns.THREE.PerspectiveCamera(view.camera.camera3D.fov);
-    cameraRightCtrl.position.copy(view.camera.camera3D.position);
-    // cameraRightCtrl.position.copy(renderer.xr.getCamera().position);
-    const cameraRighthelper = new itowns.THREE.CameraHelper(cameraRightCtrl);
-
-    XRUtils.addToScene (cameraRighthelper, true);
 
 
-    contextXR.cameraRightGrp = { camera : cameraRightCtrl, cameraHelper : cameraRighthelper };
 
     contextXR.controller1 = controller1;
     contextXR.controller2 = controller2;
@@ -88,7 +81,7 @@ Controllers.getGeodesicalQuaternion = () => {
     const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
     // const position = new itowns.Coordinates('EPSG:4978', renderer.xr.getCamera().position).as('EPSG:4326').clone().as(view.referenceCrs);
     const geodesicNormal = new itowns.THREE.Quaternion().setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal).invert();
-    return new itowns.THREE.Quaternion(-1, 0, 0, 1).normalize().multiply(geodesicNormal);
+    return new itowns.THREE.Quaternion(1, 0, 0, 1).normalize().multiply(geodesicNormal);
     // return view.camera.camera3D.quaternion.clone();
 };
 
@@ -126,7 +119,7 @@ function applyTransformationToXR(trans, offsetRotation) {
 
     const vrHead = view.camXR.parent;
     vrHead.position.copy(trans);
-    // vrHead.quaternion.copy(offsetRotation);
+    vrHead.quaternion.copy(offsetRotation);
 
     vrHead.updateMatrixWorld(true);
 }
@@ -365,11 +358,9 @@ function getRotationYaw(axisValue) {
     if (axisValue) {
         deltaRotation += Math.PI * axisValue / (140);
         // console.log('rotY: ', deltaRotation);
-
     }
 
-    // const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationY(deltaRotation);
-    const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationX(deltaRotation);
+    const thetaRotMatrix = new itowns.THREE.Matrix4().identity().makeRotationZ(deltaRotation);
     const rotationQuartenion = new itowns.THREE.Quaternion().setFromRotationMatrix(thetaRotMatrix).normalize();
     offsetRotation.premultiply(rotationQuartenion);
     return offsetRotation;

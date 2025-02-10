@@ -315,12 +315,12 @@ class OGC3DTilesLayer extends GeometryLayer {
         // Used for custom schedule callbacks (VR)
         this.tasks = [];
 
-        const tilesSchedulingCB = (func) => {
+        this.tilesSchedulingCB = (func) => {
             this.tasks.push(func);
         };
-        // We set our scheduling callback for tiles downloading and parsing / important for VR
-        this.tilesRenderer.downloadQueue.schedulingCallback = tilesSchedulingCB;
-        this.tilesRenderer.parseQueue.schedulingCallback = tilesSchedulingCB;
+        // // We set our scheduling callback for tiles downloading and parsing / important for VR
+        this.tilesRenderer.downloadQueue.schedulingCallback = this.tilesSchedulingCB;
+        this.tilesRenderer.parseQueue.schedulingCallback = this.tilesSchedulingCB;
     }
 
     /**
@@ -452,6 +452,10 @@ class OGC3DTilesLayer extends GeometryLayer {
     }
     preUpdate(context) {
         this.scale = context.camera._preSSE;
+        // if (context.view.renderer.xr.isPresenting) {
+        //     this.tilesRenderer.downloadQueue.schedulingCallback = this.tilesSchedulingCB;
+        //     this.tilesRenderer.parseQueue.schedulingCallback = this.tilesSchedulingCB;
+        // }
         this.handleTasks();
         this.tilesRenderer.update();
         return null; // don't return any element because 3d-tiles-renderer already updates them
