@@ -318,7 +318,7 @@ class OGC3DTilesLayer extends GeometryLayer {
         this.tilesSchedulingCB = (func) => {
             this.tasks.push(func);
         };
-        // // We set our scheduling callback for tiles downloading and parsing / important for VR
+        // // We set our scheduling callback for tiles downloading and parsing / important for VR https://github.com/NASA-AMMOS/3DTilesRendererJS/issues/213
         this.tilesRenderer.downloadQueue.schedulingCallback = this.tilesSchedulingCB;
         this.tilesRenderer.parseQueue.schedulingCallback = this.tilesSchedulingCB;
     }

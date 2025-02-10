@@ -110,7 +110,7 @@ const initializeWebXR = (view, options) => {
 
 
 
-                //
+                //                //  TODO is it necessary ?
                 // Update the local transformation matrix for the object itself
                 view.camera3D.updateMatrix();
                 //
@@ -132,7 +132,7 @@ const initializeWebXR = (view, options) => {
                     options.callback();
                 }
 
-                //
+                //  TODO is it necessary ?
                 // if (view.scene.matrixWorldAutoUpdate === true) {
                 //     view.scene.updateMatrixWorld();
                 // }
