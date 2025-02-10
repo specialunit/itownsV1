@@ -79,8 +79,8 @@
             // const view = new itowns.GlobeView(viewerDiv, placement, {
             //     webXR: { scale: 0.005 },
             // });
-            // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
-            // view.scene.matrixWorldAutoUpdate = true;
+            // Temporary workaround to https://github.com/iTowns/itowns/issues/2473 + without it, controllers don't update
+            view.scene.matrixWorldAutoUpdate = true;
 
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);
