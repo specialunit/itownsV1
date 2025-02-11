@@ -175,9 +175,12 @@ function clampAndApplyTransformationToXR(trans, offsetRotation) {
 
 
 function applyTransformationToXR(trans, offsetRotation) {
+    const vrHead = view.camXR.parent;
+
     if(!offsetRotation){
         console.error('missing rotation quaternion');
-        return;
+        offsetRotation = vrHead.quaternion;
+        // return;
     }
     if(!trans) {
         console.error('missing translation vector');
@@ -188,7 +191,6 @@ function applyTransformationToXR(trans, offsetRotation) {
         XRUtils.addPositionSegment('cameraPositionsLine', trans, 0xffffff, 1, true);
     }
 
-    const vrHead = view.camXR.parent;
     vrHead.position.copy(trans);
     vrHead.quaternion.copy(offsetRotation);
     // vrHead.quaternion.copy(vrHead.quaternion);
@@ -418,7 +420,8 @@ function switchRegisteredCoordinates() {
     } else{
         indexSavedCoordinates++;
     }
-    applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3(), savedCoordinates[indexSavedCoordinates-1].rotation);
+    // applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3(), savedCoordinates[indexSavedCoordinates-1].rotation);
+    applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3());
 }
 
 // ////////////////////////////////// MODE 1
@@ -426,10 +429,12 @@ function switchRegisteredCoordinates() {
 function getRotationYaw(axisValue) {
     // Get the current camera's orientation
     const baseOrientation = view.camXR.parent.quaternion.clone();
+    //  Don't use the directly the camera
+    // const baseOrientation = view.camera.camera3D.quaternion.clone();
     let deltaRotation = 0;
     // Update deltaRotation based on the controller’s axis input
     if (axisValue) {
-        deltaRotation += Math.PI * axisValue / 140; // Adjust sensitivity as needed
+        deltaRotation = Math.PI * axisValue / 140; // Adjust sensitivity as needed
     }
 
     // Get the local “up” direction from the camera coordinate
@@ -484,8 +489,7 @@ function cameraOnFly(ctrl) {
 
     const offsetRotation = getRotationYaw();
     const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
-    // const trans = renderer.xr.getCamera().position.clone().add(directionX.add(directionZ));
-    // const trans = directionX.add(directionZ);
+
     applyTransformationToXR(trans, offsetRotation);
 
     // clampAndApplyTransformationToXR(trans, offsetRotation);
