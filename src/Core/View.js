@@ -200,7 +200,7 @@ class View extends THREE.EventDispatcher {
             this.mainLoop.gfxEngine.getWindowSize().y,
             options.camera);
 
-        this._frameRequesters = { };
+        this._frameRequesters = {};
 
         this._resizeListener = () => this.resize();
         window.addEventListener('resize', this._resizeListener, false);
@@ -217,8 +217,8 @@ class View extends THREE.EventDispatcher {
             // all layers must be ready
             const allReady = this.getLayers().every(layer => layer.ready);
             if (allReady &&
-                    this.mainLoop.scheduler.commandsWaitingExecutionCount() == 0 &&
-                    this.mainLoop.renderingState == RENDERING_PAUSED) {
+                this.mainLoop.scheduler.commandsWaitingExecutionCount() == 0 &&
+                this.mainLoop.renderingState == RENDERING_PAUSED) {
                 this.dispatchEvent({ type: VIEW_EVENTS.LAYERS_INITIALIZED });
                 this.removeFrameRequester(MAIN_LOOP_EVENTS.UPDATE_END, this._allLayersAreReadyCallback);
             }
@@ -954,7 +954,7 @@ class View extends THREE.EventDispatcher {
                 continue;
             }
 
-            for (const materialLayer of tile.object.material.getLayers(layers)) {
+            for (const materialLayer of tile.object.material.getTiles(layers)) {
                 for (const texture of materialLayer.textures) {
                     if (!texture.features) {
                         continue;

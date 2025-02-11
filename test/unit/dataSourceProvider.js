@@ -19,7 +19,7 @@ import GeometryLayer from 'Layer/GeometryLayer';
 import PlanarLayer from 'Core/Prefab/Planar/PlanarLayer';
 import Style from 'Core/Style';
 import Feature2Mesh from 'Converter/Feature2Mesh';
-import LayeredMaterial from 'Renderer/LayeredMaterial';
+import { LayeredMaterial } from 'Renderer/LayeredMaterial';
 import { EMPTY_TEXTURE_ZOOM } from 'Renderer/RasterTile';
 import sinon from 'sinon';
 
@@ -73,12 +73,12 @@ describe('Provide in Sources', function () {
         planarlayer.attach(colorlayer);
         planarlayer.attach(elevationlayer);
 
-        const fakeNode = { material,  setBBoxZ: () => {},  addEventListener: () => {} };
+        const fakeNode = { material, setBBoxZ: () => { }, addEventListener: () => { } };
         colorlayer.setupRasterNode(fakeNode);
         elevationlayer.setupRasterNode(fakeNode);
 
-        nodeLayer = material.getLayer(colorlayer.id);
-        nodeLayerElevation = material.getLayer(elevationlayer.id);
+        nodeLayer = material.getColorTile(colorlayer.id);
+        nodeLayerElevation = material.getElevationTile();
 
         featureLayer = new GeometryLayer('geom', new THREE.Group(), {
             crs: 'EPSG:4978',
@@ -139,7 +139,7 @@ describe('Provide in Sources', function () {
         const tile = new TileMesh(geom, material, planarlayer, extent);
         material.visible = true;
         nodeLayer.level = EMPTY_TEXTURE_ZOOM;
-        tile.parent = { };
+        tile.parent = {};
 
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
@@ -198,7 +198,7 @@ describe('Provide in Sources', function () {
         const tile = new TileMesh(geom, material, planarlayer, extent, zoom);
         material.visible = true;
         nodeLayer.level = EMPTY_TEXTURE_ZOOM;
-        tile.parent = { };
+        tile.parent = {};
 
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
@@ -214,7 +214,7 @@ describe('Provide in Sources', function () {
         const tile = new TileMesh(geom, material, planarlayer, extent, zoom);
         material.visible = true;
         nodeLayer.level = EMPTY_TEXTURE_ZOOM;
-        tile.parent = { };
+        tile.parent = {};
 
         planarlayer.subdivideNode(context, tile);
         TileProvider.executeCommand(context.scheduler.commands[0])
@@ -283,7 +283,8 @@ describe('Provide in Sources', function () {
         nodeLayer.level = EMPTY_TEXTURE_ZOOM;
         tile.material.visible = true;
         featureLayer.source.uid = 22;
-        const colorlayerWfs = new ColorLayer('color', { crs: 'EPSG:3857',
+        const colorlayerWfs = new ColorLayer('color', {
+            crs: 'EPSG:3857',
             source: featureLayer.source,
             style: {
                 fill: {
@@ -328,14 +329,14 @@ describe('Provide in Sources', function () {
         const tile = new TileMesh(geom, new LayeredMaterial(), planarlayer, extent);
         tile.material.visible = true;
         nodeLayer.level = EMPTY_TEXTURE_ZOOM;
-        tile.parent = { };
+        tile.parent = {};
 
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
         updateLayeredMaterialNodeImagery(context, colorlayer, tile, tile.parent);
         DataSourceProvider.executeCommand(context.scheduler.commands[0])
             .then((result) => {
-                tile.material.setSequence([colorlayer.id]);
-                tile.material.getLayer(colorlayer.id).setTextures(result, [new THREE.Vector4()]);
+                tile.material.setColorTileIds([colorlayer.id]);
+                tile.material.getColorTile(colorlayer.id).setTextures(result, [new THREE.Vector4()]);
                 assert.equal(tile.material.uniforms.colorTextures.value[0].anisotropy, 1);
                 tile.material.updateLayersUniforms();
                 assert.equal(tile.material.uniforms.colorTextures.value[0].anisotropy, 16);

@@ -31,7 +31,7 @@ let selectedNode;
 function selectTileAt(view, mouseOrEvt, showInfo = true) {
     if (selectedNode) {
         selectedNode.material.overlayAlpha = 0;
-        selectedNode.material.showOutline = view.tileLayer.showOutline;
+        selectedNode.material.setUniform('showOutline', view.tileLayer.showOutline);
         view.notifyChange(selectedNode);
     }
 
@@ -44,7 +44,7 @@ function selectTileAt(view, mouseOrEvt, showInfo = true) {
             console.info(selectedNode);
         }
         selectedNode.material.overlayAlpha = 0.5;
-        selectedNode.material.showOutline = true;
+        selectedNode.material.setUniform('showOutline', true);
         view.notifyChange(selectedNode);
     }
     return selectedNode;
@@ -79,7 +79,7 @@ export default function createTileDebugUI(datDebugTool, view, layer, debugInstan
         layer.showOutline = newValue;
 
         applyToNodeFirstMaterial(view, layer.object3d, layer, (material) => {
-            material.showOutline = newValue;
+            material.setUniform('showOutline', newValue);
         });
     });
 
@@ -235,7 +235,7 @@ export default function createTileDebugUI(datDebugTool, view, layer, debugInstan
                         circle.style.width = `${object.size}px`;
                         circle.style.height = `${object.size}px`;
                         circle.innerHTML = `${Math.floor(object.size)} px`;
-                        circle.style.left = `${coords.x - object.size  * 0.5}px`;
+                        circle.style.left = `${coords.x - object.size * 0.5}px`;
                         circle.style.top = `${coords.y - object.size * 0.5}px`;
                     })
                     .onComplete(removeAnimationRequester)

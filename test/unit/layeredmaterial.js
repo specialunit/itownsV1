@@ -8,7 +8,7 @@ import TileMesh from 'Core/TileMesh';
 import * as THREE from 'three';
 import Tile from 'Core/Tile/Tile';
 import OBB from 'Renderer/OBB';
-import LayeredMaterial from 'Renderer/LayeredMaterial';
+import { LayeredMaterial } from 'Renderer/LayeredMaterial';
 import sinon from 'sinon';
 import Fetcher from 'Provider/Fetcher';
 import Renderer from './bootstrap';
@@ -40,7 +40,7 @@ describe('material state vs layer state', function () {
         const geom = new THREE.BufferGeometry();
         geom.OBB = new OBB(new THREE.Vector3(), new THREE.Vector3(1, 1, 1));
         node = new TileMesh(geom, material, view.tileLayer, extent);
-        node.parent = { };
+        node.parent = {};
 
         context = { view, scheduler: view.mainLoop.scheduler };
     });
@@ -51,7 +51,7 @@ describe('material state vs layer state', function () {
 
     it('should correctly initialize opacity & visibility', () => {
         updateLayeredMaterialNodeImagery(context, layer, node, node.parent);
-        const nodeLayer = material.getLayer(layer.id);
+        const nodeLayer = material.getTile(layer.id);
         nodeLayer.textures.push(new THREE.Texture());
         assert.equal(nodeLayer.opacity, layer.opacity);
         assert.equal(nodeLayer.visible, layer.visible);
@@ -60,7 +60,7 @@ describe('material state vs layer state', function () {
     it('should update material opacity & visibility', () => {
         layer.opacity = 0.5;
         layer.visible = false;
-        const nodeLayer = material.getLayer(layer.id);
+        const nodeLayer = material.getTile(layer.id);
         assert.equal(nodeLayer.opacity, layer.opacity);
         assert.equal(nodeLayer.visible, layer.visible);
     });

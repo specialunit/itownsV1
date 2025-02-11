@@ -42,7 +42,7 @@ void main() {
         gl_FragColor.rgb = mix(gl_FragColor.rgb, color.rgb, color.a);
     }
 
-  #if defined(DEBUG)
+  #if DEBUG == 1
     if (showOutline) {
         #pragma unroll_loop
         for ( int i = 0; i < NUM_CRS; i ++) {

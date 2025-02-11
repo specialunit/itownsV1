@@ -373,7 +373,7 @@ class TiledGeometryLayer extends GeometryLayer {
      */
     static hasEnoughTexturesToSubdivide(context, node) {
         const layerUpdateState = node.layerUpdateState || {};
-        let nodeLayer = node.material.getElevationLayer();
+        let nodeLayer = node.material.getElevationTile();
 
         for (const e of context.elevationLayers) {
             const extents = node.getExtentsByProjection(e.crs);
@@ -403,7 +403,7 @@ class TiledGeometryLayer extends GeometryLayer {
             if (layerUpdateState[c.id] && layerUpdateState[c.id].inError()) {
                 continue;
             }
-            nodeLayer = node.material.getLayer(c.id);
+            nodeLayer = node.material.getColorTile(c.id);
             if (c.source.extentInsideLimit(node.extent, zoom) && (!nodeLayer || nodeLayer.level < 0)) {
                 return false;
             }

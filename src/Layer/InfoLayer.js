@@ -35,7 +35,7 @@ export class InfoTiledGeometryLayer extends InfoLayer {
                     let layers = [];
                     this.displayed.tiles.forEach((tile) => {
                         const m = tile.material;
-                        layers = [...new Set([...layers, ...m.colorLayerIds.filter(id => m.getLayer(id)), ...m.elevationLayerIds])];
+                        layers = [...new Set([...layers, ...m.colorTileIds.filter(id => m.getColorTile(id)), m.elevationTileId])];
                     });
 
                     return this.layer.attachedLayers.filter(l => layers.includes(l.id));

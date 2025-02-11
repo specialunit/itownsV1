@@ -27,7 +27,7 @@ function getIndiceWithPitch(i, pitch, w) {
  *
  * @class RasterTile
  */
-class RasterTile extends THREE.EventDispatcher {
+export class RasterTile extends THREE.EventDispatcher {
     constructor(material, layer) {
         super();
         this.layer = layer;
@@ -111,8 +111,6 @@ class RasterTile extends THREE.EventDispatcher {
         }
     }
 }
-
-export default RasterTile;
 
 export class RasterColorTile extends RasterTile {
     get effect_type() {

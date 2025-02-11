@@ -17,8 +17,8 @@ function refinementCommandCancellationFn(cmd) {
     // Cancel the command if the tile already has a better texture.
     // This is only needed for elevation layers, because we may have several
     // concurrent layers but we can only use one texture.
-    if (cmd.layer.isElevationLayer && cmd.requester.material.getElevationLayer() &&
-        cmd.targetLevel <= cmd.requester.material.getElevationLayer().level) {
+    if (cmd.layer.isElevationLayer && cmd.requester.material.getElevationTile() &&
+        cmd.targetLevel <= cmd.requester.material.getElevationTile().level) {
         return true;
     }
 
@@ -55,7 +55,7 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
         return;
     }
 
-    let nodeLayer = material.getLayer(layer.id);
+    let nodeLayer = material.getTile(layer.id);
 
     // Initialisation
     if (node.layerUpdateState[layer.id] === undefined) {
@@ -67,8 +67,8 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
             // parent texture
             if (!layer.noTextureParentOutsideLimit &&
                 parent.material &&
-                parent.material.getLayer &&
-                parent.material.getLayer(layer.id)) {
+                parent.material.getTile &&
+                parent.material.getTile(layer.id)) {
                 // ok, we're going to inherit our parent's texture
             } else {
                 node.layerUpdateState[layer.id].noMoreUpdatePossible();
@@ -81,7 +81,7 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
             nodeLayer = layer.setupRasterNode(node);
 
             // Init the node by parent
-            const parentLayer = parent.material?.getLayer(layer.id);
+            const parentLayer = parent.material?.getTile(layer.id);
             nodeLayer.initFromParent(parentLayer, extentsDestination);
         }
 
@@ -171,7 +171,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
         return;
     }
     // Init elevation layer, and inherit from parent if possible
-    let nodeLayer = material.getElevationLayer();
+    let nodeLayer = material.getElevationTile();
     if (!nodeLayer) {
         nodeLayer = layer.setupRasterNode(node);
     }
@@ -179,7 +179,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
     if (node.layerUpdateState[layer.id] === undefined) {
         node.layerUpdateState[layer.id] = new LayerUpdateState();
 
-        const parentLayer = parent.material?.getLayer(layer.id);
+        const parentLayer = parent.material?.getTile(layer.id);
         nodeLayer.initFromParent(parentLayer, extentsDestination);
 
         if (nodeLayer.level >= layer.source.zoom.min) {
@@ -190,8 +190,8 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
 
     // Possible conditions to *not* update the elevation texture
     if (layer.frozen ||
-            !material.visible ||
-            !node.layerUpdateState[layer.id].canTryUpdate()) {
+        !material.visible ||
+        !node.layerUpdateState[layer.id].canTryUpdate()) {
         return;
     }
 
@@ -232,19 +232,19 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
         err => handlingError(err, node, layer, targetLevel, context.view));
 }
 
-export function removeLayeredMaterialNodeLayer(layerId) {
+export function removeLayeredMaterialNodeTile(tileId) {
     /**
      * @param {TileMesh} node - The node to udpate.
      */
-    return function removeLayeredMaterialNodeLayer(node) {
-        if (node.material?.removeLayer) {
-            if (node.material.elevationLayerIds.indexOf(layerId) > -1) {
+    return function removeLayeredMaterialNodeTile(node) {
+        if (node.material?.removeTile) {
+            if (node.material.elevationTile !== undefined) {
                 node.setBBoxZ({ min: 0, max: 0 });
             }
-            node.material.removeLayer(layerId);
+            node.material.removeTile(tileId);
         }
-        if (node.layerUpdateState && node.layerUpdateState[layerId]) {
-            delete node.layerUpdateState[layerId];
+        if (node.layerUpdateState && node.layerUpdateState[tileId]) {
+            delete node.layerUpdateState[tileId];
         }
     };
 }
