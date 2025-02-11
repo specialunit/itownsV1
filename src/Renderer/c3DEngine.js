@@ -56,8 +56,8 @@ class c3DEngine {
 
         this.renderView = function _(view) {
             this.renderer.clear();
-            if (view.camXR) {
-                this.renderer.render(view.scene, view.camXR);
+            if (view._camXR) {
+                this.renderer.render(view.scene, view._camXR);
             } else {
                 this.renderer.render(view.scene, view.camera3D);
             }

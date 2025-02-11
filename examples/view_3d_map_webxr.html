@@ -162,8 +162,9 @@
 
             function initXR() {
                 view.renderer.xr.enabled = true;
-                // Temporary workaround to https://github.com/iTowns/itowns/issues/2473 + without it,controllers don't update
-                view.scene.matrixWorldAutoUpdate = true;
+                // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
+                // + without it,controllers don't update
+                // view.scene.matrixWorldAutoUpdate = true;
 
                 // Instantiate three's VR Button
                 const vrButton = VRButton.createButton(view.renderer);

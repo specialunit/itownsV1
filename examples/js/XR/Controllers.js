@@ -64,7 +64,7 @@ function clampAndApplyTransformationToXR(trans, offsetRotation) {
 
 
 function applyTransformationToXR(trans, offsetRotation) {
-    const vrHead = view.camXR.parent;
+    const vrHead = view._camXR.parent;
 
     if (!offsetRotation) {
         console.error('missing rotation quaternion');
@@ -111,28 +111,15 @@ function getSpeedFactor() {
     return speedFactor * 10;    //  todo remove *10
 }
 
-function getTranslationZ(axisValue, speedFactor) {
-    // flying following the locked camera look at
-    const speed = axisValue * speedFactor;
-    const matrixHeadset = new itowns.THREE.Matrix4();
-    matrixHeadset.identity().extractRotation(view.camera3D.matrixWorld);
-    const directionY = new itowns.THREE.Vector3(0, 0, 1).applyMatrix4(matrixHeadset).multiplyScalar(speed);
-    return directionY;
-}
-
-
-
-
-// ////////////////////////////////// MODE 1
 
 function getRotationYaw(axisValue) {
     // Get the current camera's orientation
-    const baseOrientation = view.camXR.parent.quaternion.clone();
+    const baseOrientation = view._camXR.parent.quaternion.clone();
     //  Don't use the directly the camera
     let deltaRotation = 0;
     // Update deltaRotation based on the controller’s axis input
     if (axisValue) {
-        deltaRotation = Math.PI * axisValue / 140; // Adjust sensitivity as needed
+        deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed
     }
 
     // Get the local “up” direction from the camera coordinate

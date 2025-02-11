@@ -2,25 +2,6 @@ import * as THREE from 'three';
 import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
 
 
-
-function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
-    const m = projectionMatrix.elements;
-
-    // Extract near and far
-    const near = m[14] / (m[10] - 1);
-    const far = m[14] / (m[10] + 1);
-
-    // Extract vertical FOV
-    const fovY = 2 * Math.atan(1 / m[5]); // m[5] = 1 / tan(fovY / 2)
-    const fov = THREE.MathUtils.radToDeg(fovY); // Convert to degrees
-
-    // Extract aspect ratio
-    const aspect = m[5] / m[0]; // m[0] = 1 / (tan(fovY / 2) * aspect)
-
-    return { near, far, aspect, fov };
-}
-
-
 /**
  *
  * @param {*} view  dsfsdf
@@ -42,15 +23,15 @@ const initializeWebXR = (view, options) => {
         vrHeadSet.add(xr.getCamera());
 
         // Placeholder camera to initialize correctly the vr, which needs a parent
-        view.camXR = view.camera.camera3D.clone();
+        view._camXR = view.camera.camera3D.clone();
 
         // Important to see the controllers -> maybe could be improved
-        view.camXR.far = 2000000;
-        view.camXR.near = 0.1;
-        view.camXR.updateProjectionMatrix();
+        view._camXR.far = 2000000;
+        view._camXR.near = 0.1;
+        view._camXR.updateProjectionMatrix();
 
-        // view.camXR.updateMatrixWorld(true);
-        vrHeadSet.add(view.camXR);
+        // view._camXR.updateMatrixWorld(true);
+        vrHeadSet.add(view._camXR);
 
         view.notifyChange();
 
@@ -61,35 +42,7 @@ const initializeWebXR = (view, options) => {
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
-                /* This is what's done in updateUserCamera the WebXRManager.js of threejs
-                 Update projectionMatrix, could be replaced by:
-                camera.projectionMatrix.copy( cameraXR.projectionMatrix );
-               camera.projectionMatrixInverse.copy( cameraXR.projectionMatrixInverse );
-                But it safer to also change all the attributes, in case of another call to updateProjectionMatrix
-                */
-
-                // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
-                // const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(xr.getCamera().projectionMatrix);
-                const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(view.camXR.projectionMatrix);
-                view.camera3D.near = near;
-                view.camera3D.far = far;
-                view.camera3D.aspect = aspect;
-                view.camera3D.fov = fov;
-                view.camera3D.zoom = 1;
-                view.camera3D.updateProjectionMatrix();
-
-                xr.getCamera().getWorldPosition(view.camera3D.position);
-                xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
-
-
-
-                //                //  TODO is it necessary ?
-                // Update the local transformation matrix for the object itself
-                view.camera3D.updateMatrix();
-                //
-                // // Update the world transformation matrix, ensuring it reflects global transforms
-                view.camera3D.updateMatrixWorld(true);
-
+                updateCamera3D();
                 if (xrControllers.left) {
                     listenGamepad(xrControllers.left);
                 }
@@ -100,13 +53,11 @@ const initializeWebXR = (view, options) => {
                     options.callback();
                 }
 
-                //  TODO is it necessary ?
-                // if (view.scene.matrixWorldAutoUpdate === true) {
-                //     view.scene.updateMatrixWorld();
-                // }
-                //
-                // view.notifyChange(vrHeadSet, true);
-                view.notifyChange(view.camera.camera3D, true);
+                // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
+                // + without it,controllers don't update
+                if (!view.scene.matrixWorldAutoUpdate) {
+                    view.scene.updateMatrixWorld();
+                }
             }
             view.mainLoop.step(view, timestamp);
         });
@@ -201,6 +152,55 @@ const initializeWebXR = (view, options) => {
     function bindGripController(controllerModelFactory, gripController, vrHeadSet) {
         gripController.add(controllerModelFactory.createControllerModel(gripController));
         vrHeadSet.add(gripController);
+    }
+
+
+    function updateCamera3D() {
+        /* This is what's done in updateUserCamera the WebXRManager.js of threejs
+                Update projectionMatrix, could be replaced by:
+               camera.projectionMatrix.copy( cameraXR.projectionMatrix );
+              camera.projectionMatrixInverse.copy( cameraXR.projectionMatrixInverse );
+               But it safer to also change all the attributes, in case of another call to updateProjectionMatrix
+               */
+
+        // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
+        const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(view._camXR.projectionMatrix);
+        view.camera3D.near = near;
+        view.camera3D.far = far;
+        view.camera3D.aspect = aspect;
+        view.camera3D.fov = fov;
+        view.camera3D.zoom = 1;
+        view.camera3D.updateProjectionMatrix();
+
+        xr.getCamera().getWorldPosition(view.camera3D.position);
+        xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
+
+
+
+        //                //  TODO is it necessary ?
+        // Update the local transformation matrix for the object itself
+        view.camera3D.updateMatrix();
+        //
+        // // Update the world transformation matrix, ensuring it reflects global transforms
+        view.camera3D.updateMatrixWorld(true);
+        view.notifyChange(view.camera.camera3D, true);
+    }
+
+    function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
+        const m = projectionMatrix.elements;
+
+        // Extract near and far
+        const near = m[14] / (m[10] - 1);
+        const far = m[14] / (m[10] + 1);
+
+        // Extract vertical FOV
+        const fovY = 2 * Math.atan(1 / m[5]); // m[5] = 1 / tan(fovY / 2)
+        const fov = THREE.MathUtils.radToDeg(fovY); // Convert to degrees
+
+        // Extract aspect ratio
+        const aspect = m[5] / m[0]; // m[0] = 1 / (tan(fovY / 2) * aspect)
+
+        return { near, far, aspect, fov };
     }
 };
 
