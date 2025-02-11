@@ -1,7 +1,7 @@
 const Controllers = {};
 
-var ITOWNS_CAMERA_CRS = 'EPSG:4326';
-var WORLD_CRS = 'EPSG:3857';
+const ITOWNS_CAMERA_CRS = 'EPSG:4326';
+const WORLD_CRS = 'EPSG:3857';
 let renderer;
 
 // move clipped to a fixed altitude
@@ -20,18 +20,18 @@ let leftCtrChangeNavMode = false;
 let alreadySwitched = false;
 const navigationMode = [];
 let currentNavigationModeIndex = 0;
-var trackPositionActive = true;
-var isMovingLeft = false;
-var isMovingRight = false;
+let trackPositionActive = true;
+let isMovingLeft = false;
+let isMovingRight = false;
 
 let view;
 let vrHeadSet;
 let contextXR;
 // [{ coords: {itowns.Coordinates}, rotation : {Quaternion} }]
-var savedCoordinates = [];
-var indexSavedCoordinates = 1;
+const savedCoordinates = [];
+let indexSavedCoordinates = 1;
 initSavedCoordinates();
-var cache = {};
+const cache = {};
 
 /**
  * Controller.userData {
@@ -59,10 +59,10 @@ Controllers.addControllers = (_view, _contextXR) => {
     controller1.addEventListener('itowns-xr-button-pressed', onLeftButtonPressed);
     controller1.addEventListener('itowns-xr-button-released', onLeftButtonReleased);
     controller2.addEventListener('itowns-xr-button-released', onRightButtonReleased);
-    controller1.addEventListener( 'selectstart', onSelectLeftStart);
-    controller1.addEventListener( 'selectend', onSelectLeftEnd);
-    controller2.addEventListener( 'selectstart', onSelectRightStart);
-    controller2.addEventListener( 'selectend', onSelectRightEnd);
+    controller1.addEventListener('selectstart', onSelectLeftStart);
+    controller1.addEventListener('selectend', onSelectLeftEnd);
+    controller2.addEventListener('selectstart', onSelectRightStart);
+    controller2.addEventListener('selectend', onSelectRightEnd);
 
 
 
@@ -74,72 +74,7 @@ Controllers.addControllers = (_view, _contextXR) => {
     cache.position = null;
     cache.isFixedPosition = false;
 };
-// Helper: Extract the twist (rotation about a given axis) from a quaternion.
-// This uses the “swing–twist” decomposition.
-// twistAxis is assumed normalized.
-// function extractTwist(q, twistAxis) {
-//     // Get the vector (imaginary) part of the quaternion
-//     const r = new itowns.THREE.Vector3(q.x, q.y, q.z);
-//     // Project that vector onto the twist axis
-//     const proj = twistAxis.clone().multiplyScalar(r.dot(twistAxis));
-//     // Build a quaternion that has the same twist (and the same w)
-//     const twist = new itowns.THREE.Quaternion(proj.x, proj.y, proj.z, q.w);
-//     twist.normalize();
-//     return twist;
-// }
-//
-// Controllers.getGeodesicalQuaternion = () => {
-//     // 1. Get the camera’s current position (and its geodesic normal)
-//     const position = view.controls.getCameraCoordinate()
-//         .clone()
-//         .as(view.referenceCrs);
-//     // (Assume that position.geodesicNormal is a normalized THREE.Vector3)
-//
-//     // 2. Compute a quaternion that (if applied to the default up vector)
-//     //    would yield the geodesic normal. (Notice the .invert() to “flip” the rotation.)
-//     const qAlign = new itowns.THREE.Quaternion()
-//         .setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal)
-//         .invert();
-//
-//     // 3. (Optional) You previously applied a fixed –90° rotation
-//     //    about the Z axis so that “east” was the default heading.
-//     //    Instead, we want to preserve the camera’s original heading.
-//     //    In the original code you had:
-//     //       const ninetyDegRotation = new itowns.THREE.Quaternion()
-//     //           .setFromAxisAngle(new itowns.THREE.Vector3(0, 0, 1), -Math.PI / 2);
-//     //    Now we will extract the current “twist” from the camera’s quaternion.
-//     //    (Here we assume that the camera’s “up” is initially (0,0,1).)
-//     const currentQuat = view.camera3D.quaternion.clone();
-//     const twist = extractTwist(currentQuat, new itowns.THREE.Vector3(0, 0, 1));
-//
-//     // 4. Combine: First, align the up axis to the geodesic normal.
-//     //    Then, append the twist (heading) that the camera already had.
-//     //    (Order is important here: remember that quaternion multiplication composes rotations right‐to‐left.)
-//     const geodesicQuat = qAlign.multiply(twist);
-//
-//     return geodesicQuat;
-// };
 
-// Controllers.getGeodesicalQuaternion = () => {
-//     // Get the camera's current position in the reference CRS
-//     const position = view.controls.getCameraCoordinate().clone().as(view.referenceCrs);
-//
-//     // Compute the quaternion that aligns (0,0,1) with the geodesic normal (then invert it)
-//     const geodesicNormal = new itowns.THREE.Quaternion()
-//         .setFromUnitVectors(new itowns.THREE.Vector3(0, 0, 1), position.geodesicNormal)
-//         .invert();
-//
-//     // Define the 90° rotation about the Z-axis explicitly (aligning with geodesic east)
-//     const ninetyDegRotation = new itowns.THREE.Quaternion()
-//         .setFromAxisAngle(new itowns.THREE.Vector3(0, 0, 1), -Math.PI / 2);
-//
-//     // Get the camera's current rotation
-//     // const cameraRotation = view.camera.camera3D.quaternion.clone();
-//     const cameraRotation = view.renderer.xr.getCamera().quaternion.clone();
-//
-//     // Apply the geodesic alignment, then the 90° rotation, then the camera’s existing rotation
-//     return geodesicNormal.multiply(ninetyDegRotation).multiply(cameraRotation);
-// };
 
 Controllers.getGeodesicalQuaternion = () => {
     // Get the camera's coordinate in the reference CRS.
@@ -177,16 +112,16 @@ function clampAndApplyTransformationToXR(trans, offsetRotation) {
 function applyTransformationToXR(trans, offsetRotation) {
     const vrHead = view.camXR.parent;
 
-    if(!offsetRotation){
+    if (!offsetRotation) {
         console.error('missing rotation quaternion');
         offsetRotation = vrHead.quaternion;
         // return;
     }
-    if(!trans) {
+    if (!trans) {
         console.error('missing translation vector');
         return;
     }
-    if(trackPositionActive){
+    if (trackPositionActive) {
         XRUtils.addPositionPoints('cameraPositionsPoints', trans, 0xb51800, 30, true);
         XRUtils.addPositionSegment('cameraPositionsLine', trans, 0xffffff, 1, true);
     }
@@ -205,8 +140,8 @@ function applyTransformationToXR(trans, offsetRotation) {
  */
 function clampToGround(trans) {
     const transCoordinate = new itowns.Coordinates(view.referenceCrs, trans.x, trans.y, trans.z);
-    const terrainElevation = itowns.DEMUtils.getElevationValueAt(view.tileLayer, transCoordinate, itowns.DEMUtils.PRECISE_READ_Z);
-    if(!terrainElevation) {
+    const terrainElevation = itowns.DEMUtils.getElevationValueAt(view.tileLayer, transCoordinate, itowns.DEMUtils.PRECISE_READ_Z) || 0;
+    if (terrainElevation == null) {
         console.error('no elevation intersection possible');
         return;
     }
@@ -243,7 +178,7 @@ function onRightButtonPressed(data) {
     if (data.message.buttonIndex === 3) {
         // hack mode, test many stick interaction
         rightCtrChangeNavMode = true;
-        if(leftCtrChangeNavMode) {
+        if (leftCtrChangeNavMode) {
             switchNavigationMode();
         }
     }
@@ -257,7 +192,7 @@ function onLeftButtonPressed(data) {
     if (data.message.buttonIndex === 3) {
         // hack mode, test many stick interaction
         leftCtrChangeNavMode = true;
-        if(rightCtrChangeNavMode) {
+        if (rightCtrChangeNavMode) {
             switchNavigationMode();
         }
     }
@@ -267,9 +202,9 @@ function onRightAxisChanged(data) {
     if (data.target.name !== 'rightController') {
         return;
     }
-    if(!isMovingRight) {
+    if (!isMovingRight) {
         isMovingRight = true;
-        console.log("starting right stick");
+        console.log('starting right stick');
     }
     navigationMode[currentNavigationModeIndex].onRightAxisChanged(data);
 }
@@ -278,9 +213,9 @@ function onLeftAxisChanged(data) {
     if (data.target.name !== 'leftController') {
         return;
     }
-    if(!isMovingLeft) {
+    if (!isMovingLeft) {
         isMovingLeft = true;
-        console.log("starting left stick");
+        console.log('starting left stick');
     }
     navigationMode[currentNavigationModeIndex].onLeftAxisChanged(data);
 }
@@ -288,14 +223,14 @@ function onLeftAxisChanged(data) {
 function onRightAxisStop(data) {
     // camera fly reset
     data.message.controller.flyDirectionQuat = undefined;
-    console.log("stopping right stick, reset fixed Quat");
+    console.log('stopping right stick, reset fixed Quat');
     isMovingRight = false;
     navigationMode[currentNavigationModeIndex].onRightAxisStop(data);
 }
 
 function onLeftAxisStop(data) {
     navigationMode[currentNavigationModeIndex].onLeftAxisStop(data);
-    console.log("stopping left stick");
+    console.log('stopping left stick');
     isMovingLeft = false;
 }
 
@@ -304,12 +239,12 @@ function onLeftButtonReleased(data) {
         return;
     }
     leftCtrChangeNavMode = false;
-    alreadySwitched=false;
+    alreadySwitched = false;
     navigationMode[currentNavigationModeIndex].onLeftButtonReleased(data);
-    if (data.message.buttonIndex === 4){
+    if (data.message.buttonIndex === 4) {
         switchDebugMode();
     }
-    if(data.message.buttonIndex === 5){
+    if (data.message.buttonIndex === 5) {
         Controllers.change3DTileRepresentation();
     }
 }
@@ -319,19 +254,19 @@ function onRightButtonReleased(data) {
         return;
     }
     rightCtrChangeNavMode = false;
-    alreadySwitched=false;
+    alreadySwitched = false;
     navigationMode[currentNavigationModeIndex].onRightButtonReleased(data);
 }
 
-///////// Common binding available for each mode ////////////////////
+/// ////// Common binding available for each mode ////////////////////
 
 function switchNavigationMode() {
-    if(alreadySwitched) {
+    if (alreadySwitched) {
         return;
     }
     alreadySwitched = true;
-    if(currentNavigationModeIndex >= navigationMode.length - 1) {
-        currentNavigationModeIndex=0;
+    if (currentNavigationModeIndex >= navigationMode.length - 1) {
+        currentNavigationModeIndex = 0;
     } else {
         currentNavigationModeIndex++;
     }
@@ -344,25 +279,25 @@ function switchDebugMode() {
     console.log('debug is: ', contextXR.showDebug);
 }
 
-Controllers.change3DTileRepresentation = function() {
-    let pntsLayer = view.getLayerById("3d-tiles-geredis");
+Controllers.change3DTileRepresentation = function () {
+    let pntsLayer = view.getLayerById('3d-tiles-geredis');
 
-    if(pntsLayer){
+    if (pntsLayer) {
         pntsLayer = pntsLayer;
         pntsLayer.pntsMode = pntsLayer.pntsMode == itowns.PNTS_MODE.COLOR ? itowns.PNTS_MODE.CLASSIFICATION : itowns.PNTS_MODE.COLOR;
         view.notifyChange(view.camera.camera3D);
     }
-}
+};
 
 function applyTeleportation(ctrl) {
     // if locked, should I do a second click to validate as we are locked ?
-    if(!ctrl.userData.isSelecting) {
+    if (!ctrl.userData.isSelecting) {
         // if has been aborted
         return;
     }
     ctrl.userData.isSelecting = false;
     ctrl.userData.lockedTeleportPosition = false;
-    if ( contextXR.coordOnCamera ) {
+    if (contextXR.coordOnCamera) {
         const offsetRotation = Controllers.getGeodesicalQuaternion();
         const projectedCoordinate = contextXR.coordOnCamera.as(view.referenceCrs);
         XRUtils.showPosition('intersect', projectedCoordinate, 0x0000ff, 50, true);
@@ -392,7 +327,7 @@ function applyTeleportation(ctrl) {
  const transform = new XRRigidTransform( contextXR.originalPosition.clone().add(contextXR.controllerCameraRelativePos).applyQuaternion(quat), quat );
  const teleportSpaceOffset = contextXR.baseReferenceSpace.getOffsetReferenceSpace( transform );
  renderer.xr.setReferenceSpace( teleportSpaceOffset );
- }*/
+ } */
 
 function getSpeedFactor() {
     const speedFactor = Math.min(Math.max(view.camera.elevationToGround / 50, 2), 2000);
@@ -415,13 +350,13 @@ function printPosition() {
 }
 
 function switchRegisteredCoordinates() {
-    if(indexSavedCoordinates > savedCoordinates.length - 1) {
+    if (indexSavedCoordinates > savedCoordinates.length - 1) {
         indexSavedCoordinates = 1;
-    } else{
+    } else {
         indexSavedCoordinates++;
     }
     // applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3(), savedCoordinates[indexSavedCoordinates-1].rotation);
-    applyTransformationToXR(savedCoordinates[indexSavedCoordinates-1].coords.toVector3());
+    applyTransformationToXR(savedCoordinates[indexSavedCoordinates - 1].coords.toVector3());
 }
 
 // ////////////////////////////////// MODE 1
@@ -469,7 +404,7 @@ function cameraOnFly(ctrl) {
         // FIXME using {view.camera.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction.
         ctrl.flyDirectionQuat = view.camera.camera3D.quaternion.clone().normalize();
         // ctrl.flyDirectionQuat = renderer.xr.getCamera().quaternion.clone().normalize();
-        console.log("fixing rotation quat", ctrl.flyDirectionQuat);
+        console.log('fixing rotation quat', ctrl.flyDirectionQuat);
     }
     if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
         return;
@@ -490,9 +425,9 @@ function cameraOnFly(ctrl) {
     const offsetRotation = getRotationYaw();
     const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
 
-    applyTransformationToXR(trans, offsetRotation);
+    // applyTransformationToXR(trans, offsetRotation);
 
-    // clampAndApplyTransformationToXR(trans, offsetRotation);
+    clampAndApplyTransformationToXR(trans, offsetRotation);
 }
 
 const Mode1 = {
@@ -519,7 +454,7 @@ const Mode1 = {
         const ctrl = data.message.controller;
         if (data.message.buttonIndex === 1) {
             // activate vertical adjustment
-            if(ctrl.gamepad.axes[3] === 0) {
+            if (ctrl.gamepad.axes[3] === 0) {
                 return;
             }
             // disable clip to ground
@@ -547,7 +482,7 @@ const Mode1 = {
             // updating elevation at intersection destination
             contextXR.deltaAltitude -= ctrl.gamepad.axes[3] * 100;
         } else {
-            console.log("flyyy")
+            console.log('flyyy');
             cameraOnFly(ctrl);
         }
     },
@@ -559,7 +494,7 @@ const Mode1 = {
         } else {
             let trans = cache.isFixedPosition ? cache.position.clone() : view.camera.camera3D.position.clone();
             // let trans = cache.isFixedPosition ? cache.position.clone() : renderer.xr.getCamera().position.clone();
-            if(!isMovingRight && !cache.isFixedPosition) {
+            if (!isMovingRight && !cache.isFixedPosition) {
                 cache.position = view.camera.camera3D.position.clone();
                 trans = view.camera.camera3D.position.clone();
 
@@ -576,15 +511,15 @@ const Mode1 = {
         // inop
     },
     onLeftAxisStop: (data) => {
-        console.log("left axis stop mode 1");
+        console.log('left axis stop mode 1');
         cache.isFixedPosition = false;
     },
     onRightButtonReleased: (data) => {
         // inop
-        if(data.message.buttonIndex === 4) {
+        if (data.message.buttonIndex === 4) {
             switchRegisteredCoordinates();
         }
-        if(data.message.buttonIndex === 5) {
+        if (data.message.buttonIndex === 5) {
             trackPositionActive = !trackPositionActive;
         }
     },
@@ -624,7 +559,7 @@ const Mode2 = {
     },
     onRightButtonPressed: (data) => {
         if (data.message.buttonIndex === 4 || data.message.buttonIndex === 5) {
-            if(!startedPressButton) {
+            if (!startedPressButton) {
                 startedPressButton = Date.now();
             }
             // disable clip to ground
@@ -706,7 +641,6 @@ const Mode2 = {
         } else {
             actionElevationPerformed = false;
         }
-
     },
     onLeftButtonReleased: (data) => {
         // inop
@@ -715,17 +649,17 @@ const Mode2 = {
 
 
 function initSavedCoordinates() {
-    var coords0 = new itowns.Coordinates(WORLD_CRS, 4412622, -26373.39453125, 4593361);
-    var rot0 =  new itowns.THREE.Quaternion(-0.6579757940364078, -0.2629275384741631, 0.2629275384741631, 0.6548328591984319);
-    var coords1 = new itowns.Coordinates(WORLD_CRS, 4413284.5, -18949.275390625, 4589538.5);
-    var rot1 = new itowns.THREE.Quaternion(-0.6574699759393404, -0.26308946606438166, 0.26308946606438166, 0.6552107267362463);
-    var coords2 = new itowns.Coordinates(WORLD_CRS, 4413334, -20101.763671875, 4589446);
-    var rot2 = new itowns.THREE.Quaternion(-0.6575365516693648, -0.26309449351722863, 0.26309449351722863, 0.6551398768053935);
-    var coords3 = new itowns.Coordinates(WORLD_CRS, 4413393, -19901.205078125, 4589395.5);
-    var rot3 =  new itowns.THREE.Quaternion(-0.6575230100706515, -0.26309850880864316, 0.26309850880864316, 0.6551502427328912);
+    const coords0 = new itowns.Coordinates(WORLD_CRS, 4412622, -26373.39453125, 4593361);
+    const rot0 =  new itowns.THREE.Quaternion(-0.6579757940364078, -0.2629275384741631, 0.2629275384741631, 0.6548328591984319);
+    const coords1 = new itowns.Coordinates(WORLD_CRS, 4413284.5, -18949.275390625, 4589538.5);
+    const rot1 = new itowns.THREE.Quaternion(-0.6574699759393404, -0.26308946606438166, 0.26308946606438166, 0.6552107267362463);
+    const coords2 = new itowns.Coordinates(WORLD_CRS, 4413334, -20101.763671875, 4589446);
+    const rot2 = new itowns.THREE.Quaternion(-0.6575365516693648, -0.26309449351722863, 0.26309449351722863, 0.6551398768053935);
+    const coords3 = new itowns.Coordinates(WORLD_CRS, 4413393, -19901.205078125, 4589395.5);
+    const rot3 =  new itowns.THREE.Quaternion(-0.6575230100706515, -0.26309850880864316, 0.26309850880864316, 0.6551502427328912);
 
-    savedCoordinates.push({coords: coords0, rotation: rot0});
-    savedCoordinates.push({coords: coords1, rotation: rot1});
-    savedCoordinates.push({coords: coords2, rotation: rot2});
-    savedCoordinates.push({coords: coords3, rotation: rot3});
+    savedCoordinates.push({ coords: coords0, rotation: rot0 });
+    savedCoordinates.push({ coords: coords1, rotation: rot1 });
+    savedCoordinates.push({ coords: coords2, rotation: rot2 });
+    savedCoordinates.push({ coords: coords3, rotation: rot3 });
 }
