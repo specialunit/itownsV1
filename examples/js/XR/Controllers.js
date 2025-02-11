@@ -7,7 +7,10 @@ Controllers.MIN_DELTA_ALTITUDE = 1.8;
 
 
 
-const isMovingRight = false;
+
+// hack mode switch between navigation Mode
+let isMovingLeft = false;
+let isMovingRight = false;
 
 let view;
 let controller1;
@@ -179,11 +182,16 @@ function cameraOnFly(ctrl) {
     const offsetRotation = getRotationYaw();
     const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
 
-    // applyTransformationToXR(trans, offsetRotation);
-
-    clampAndApplyTransformationToXR(trans, offsetRotation);
+    applyTransformationToXR(trans, offsetRotation);
+    //
+    // clampAndApplyTransformationToXR(trans, offsetRotation);
 }
 
+
+
+/*
+        Events functions
+ */
 // Function called when the right select ends
 function onSelectRightEnd(ctrl) {
     // applyTeleportation(ctrl);
@@ -235,6 +243,13 @@ function onLeftButtonPressed(data) {
 
 // Function called when the right axis changes
 function onRightAxisChanged(data) {
+    if (data.target.name !== 'rightController') {
+        return;
+    }
+    if (!isMovingRight) {
+        isMovingRight = true;
+        console.log('starting right stick');
+    }
     const ctrl = data.message.controller;
     // Translation controls: ignore if the controller has a lock button active.
     if (ctrl.lockButtonIndex) {
@@ -246,6 +261,15 @@ function onRightAxisChanged(data) {
 
 // Function called when the left axis changes
 function onLeftAxisChanged(data) {
+    if (data.target.name !== 'leftController') {
+        return;
+    }
+    if (!isMovingLeft) {
+        isMovingLeft = true;
+        console.log('starting left stick');
+    }
+
+
     const ctrl = data.message.controller;
     // Rotation controls
 
@@ -266,24 +290,34 @@ function onLeftAxisChanged(data) {
 
 // Function called when the right axis stops changing
 function onRightAxisStop(data) {
-    // No operation currently defined.
+    // camera fly reset
+    data.message.controller.flyDirectionQuat = undefined;
+    console.log('stopping right stick, reset fixed Quat');
+    isMovingRight = false;
 }
 
 // Function called when the left axis stops changing
 function onLeftAxisStop(data) {
+    isMovingLeft = false;
+
     cache.isFixedPosition = false;
 }
 
 // Function called when the right button is released
 function onRightButtonReleased(data) {
     // No operation currently defined.
-
 }
 
 // Function called when the left button is released
 function onLeftButtonReleased(data) {
     // No operation currently defined.
 }
+
+
+
+
+
+
 
 
 
