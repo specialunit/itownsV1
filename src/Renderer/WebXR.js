@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
+import { VRControls } from 'Main.js';
 
 
 /**
@@ -17,13 +18,13 @@ const initializeWebXR = (view, options) => {
         vrHeadSet.name = 'xrHeadset';
         view.scene.add(vrHeadSet);
 
-        view.camera.camera3D.getWorldPosition(vrHeadSet.position);
-        view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
+        view.camera3D.getWorldPosition(vrHeadSet.position);
+        view.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
         vrHeadSet.updateMatrixWorld(true);
         vrHeadSet.add(xr.getCamera());
 
         // Placeholder camera to initialize correctly the vr, which needs a parent
-        view._camXR = view.camera.camera3D.clone();
+        view._camXR = view.camera3D.clone();
 
         // Important to see the controllers -> maybe could be improved
         view._camXR.far = 2000000;
@@ -36,6 +37,7 @@ const initializeWebXR = (view, options) => {
         view.notifyChange();
 
         const xrControllers = initControllers(xr, vrHeadSet);
+        VRControls.init(view, vrHeadSet);
 
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
@@ -183,7 +185,7 @@ const initializeWebXR = (view, options) => {
         //
         // // Update the world transformation matrix, ensuring it reflects global transforms
         view.camera3D.updateMatrixWorld(true);
-        view.notifyChange(view.camera.camera3D, true);
+        view.notifyChange(view.camera3D, true);
     }
 
     function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
