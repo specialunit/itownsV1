@@ -264,14 +264,8 @@ class VRControls {
             console.log('starting left stick');
         }
         const ctrl = data.message.controller;
-        let trans = this.cache.isFixedPosition
-            ? this.cache.position.clone()
-            : this.view.camera3D.position.clone();
-        if (!this.isMovingRight && !this.cache.isFixedPosition) {
-            this.cache.position = this.view.camera3D.position.clone();
-            trans = this.view.camera3D.position.clone();
-            this.cache.isFixedPosition = true;
-        }
+        const trans = this.groupXR.position.clone();
+
         const quat = this.getRotationYaw(ctrl.gamepad.axes[2]);
         this.applyTransformationToXR(trans, quat);
     }
