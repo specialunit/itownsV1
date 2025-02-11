@@ -70,7 +70,6 @@ const initializeWebXR = (view, options) => {
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
     Adding a few internal states for reactivity
-    - controller.lockButtonIndex    {number} when a button is pressed, gives its index
     - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
     -
     */
@@ -96,8 +95,8 @@ const initializeWebXR = (view, options) => {
 
             for (const [index, button] of gamepad.buttons.entries()) {
                 if (button.pressed) {
-                    // 0 - gachette index
-                    // 1 - gachette majeur
+                    // 0 - trigger
+                    // 1 - grip
                     // 3 - stick pressed
                     // 4 - bottom button
                     // 5 - upper button
@@ -129,7 +128,6 @@ const initializeWebXR = (view, options) => {
         rightGripController.name = 'rightGripController';
         bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
         bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
-        vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
         return { left: leftController, right: rightController };
     }
 
@@ -139,14 +137,6 @@ const initializeWebXR = (view, options) => {
         });
         controller.addEventListener('connected', (event) => {
             controller.gamepad = event.data.gamepad;
-        });
-        controller.addEventListener('itowns-xr-button-released', (event) => {
-            const ctrl = event.message.controller;
-            ctrl.lockButtonIndex = undefined;
-        });
-        controller.addEventListener('itowns-xr-button-pressed', (event) => {
-            const ctrl = event.message.controller;
-            ctrl.lockButtonIndex = event.message.buttonIndex;
         });
         vrHeadSet.add(controller);
     }

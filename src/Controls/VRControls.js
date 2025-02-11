@@ -20,15 +20,7 @@ class VRControls {
         this.groupXR = _groupXR;
         this.renderer = _view.mainLoop.gfxEngine.renderer;
 
-        // Cache for storing position and fixed status.
-        this.cache = {
-            position: null,
-            isFixedPosition: false,
-        };
-
-        // Navigation mode flags.
-        this.isMovingLeft = false;
-        this.isMovingRight = false;
+        this.rightButtonPressed = false;
 
         // Initialize controllers
         this.controller1 = this.bindListeners(0);
@@ -128,8 +120,8 @@ class VRControls {
 
     // Calculate a yaw rotation quaternion based on an axis value.
     getRotationYaw(axisValue) {
-    // Clone the current XR group's orientation.
-        const baseOrientation = this.groupXR.quaternion.clone();
+        // Clone the current XR group's orientation.
+        const baseOrientation = this.groupXR.quaternion.clone().normalize();
         let deltaRotation = 0;
 
         if (axisValue) {
@@ -157,11 +149,6 @@ class VRControls {
 
     // Handles camera flying based on controller input.
     cameraOnFly(ctrl) {
-        if (!ctrl.flyDirectionQuat) {
-            // Lock the camera look direction.
-            ctrl.flyDirectionQuat = this.view.camera3D.quaternion.clone().normalize();
-            console.log('fixing rotation quat', ctrl.flyDirectionQuat);
-        }
         if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
             return;
         }
@@ -171,13 +158,13 @@ class VRControls {
         if (ctrl.gamepad.axes[3] !== 0) {
             const speed = ctrl.gamepad.axes[3] * speedFactor;
             directionZ = new THREE.Vector3(0, 0, 1)
-                .applyQuaternion(ctrl.flyDirectionQuat)
+                .applyQuaternion(this.view.camera3D.quaternion.clone().normalize())
                 .multiplyScalar(speed);
         }
         if (ctrl.gamepad.axes[2] !== 0) {
             const speed = ctrl.gamepad.axes[2] * speedFactor;
             directionX = new THREE.Vector3(1, 0, 0)
-                .applyQuaternion(ctrl.flyDirectionQuat)
+                .applyQuaternion(this.view.camera3D.quaternion.clone().normalize())
                 .multiplyScalar(speed);
         }
         const offsetRotation = this.getRotationYaw();
@@ -192,12 +179,11 @@ class VRControls {
     // Right select ends.
     onSelectRightEnd(ctrl) {
     // Uncomment and implement teleportation if needed:
-    // this.applyTeleportation(ctrl);
     }
 
     // Right select starts.
     onSelectRightStart(ctrl) {
-        ctrl.userData.isSelecting = true;
+    // No operation needed yet.
     }
 
     // Left select starts.
@@ -207,14 +193,7 @@ class VRControls {
 
     // Left select ends.
     onSelectLeftEnd(ctrl) {
-    // First left click (while right selecting) locks the teleportation target.
-    // Second left click cancels the teleportation target.
-        if (this.controller2.userData.lockedTeleportPosition) {
-            this.controller2.userData.isSelecting = false;
-        }
-        if (this.controller2.userData.isSelecting) {
-            this.controller2.userData.lockedTeleportPosition = true;
-        }
+        // No operation needed yet.
     }
 
     // Right button pressed.
@@ -225,11 +204,14 @@ class VRControls {
             if (ctrl.gamepad.axes[3] === 0) {
                 return;
             }
-            const offsetRotation = this.getRotationYaw();
-            const speedFactor = this.getSpeedFactor();
-            const deltaTransl = this.getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
-            const trans = this.groupXR.position.clone().add(deltaTransl);
-            this.clampAndApplyTransformationToXR(trans, offsetRotation);
+            this.rightButtonPressed = true;
+
+
+            // const offsetRotation = this.getRotationYaw();
+            // const speedFactor = this.getSpeedFactor();
+            // const deltaTransl = this.getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
+            // const trans = this.groupXR.position.clone().add(deltaTransl);
+            // this.clampAndApplyTransformationToXR(trans, offsetRotation);
         }
     }
 
@@ -243,25 +225,23 @@ class VRControls {
         if (data.target.name !== 'rightController') {
             return;
         }
-        if (!this.isMovingRight) {
-            this.isMovingRight = true;
-            console.log('starting right stick');
-        }
         const ctrl = data.message.controller;
-        if (ctrl.lockButtonIndex) {
-            return;
+        //  Check if GRIP is pressed
+        if (this.rightButtonPressed) {
+            const offsetRotation = this.getRotationYaw();
+            const speedFactor = this.getSpeedFactor();
+            const deltaTransl = this.getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
+            const trans = this.groupXR.position.clone().add(deltaTransl);
+            this.clampAndApplyTransformationToXR(trans, offsetRotation);
+        } else {
+            this.cameraOnFly(ctrl);
         }
-        this.cameraOnFly(ctrl);
     }
 
     // Left axis changed.
     onLeftAxisChanged(data) {
         if (data.target.name !== 'leftController') {
             return;
-        }
-        if (!this.isMovingLeft) {
-            this.isMovingLeft = true;
-            console.log('starting left stick');
         }
         const ctrl = data.message.controller;
         const trans = this.groupXR.position.clone();
@@ -272,20 +252,19 @@ class VRControls {
 
     // Right axis stops.
     onRightAxisStop(data) {
-        data.message.controller.flyDirectionQuat = undefined;
-        console.log('stopping right stick, reset fixed Quat');
-        this.isMovingRight = false;
+        // No operation defined.
     }
 
     // Left axis stops.
     onLeftAxisStop(data) {
-        this.isMovingLeft = false;
-        this.cache.isFixedPosition = false;
+        // No operation defined.
     }
 
     // Right button released.
     onRightButtonReleased(data) {
     // No operation defined.
+        console.log('eeeeeeeeeeee');
+        this.rightButtonPressed = false;
     }
 
     // Left button released.
