@@ -63,12 +63,9 @@
             const viewerDiv = document.getElementById('viewerDiv');
 
 
-            const scale = 1;
 
             // Create a GlobeView
-
-
-            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { scale: scale} });
+            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: {} });
 
 
             // Setup loading screen and debug menu

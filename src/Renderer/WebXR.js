@@ -1,14 +1,8 @@
 import * as THREE from 'three';
 import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
-import Coordinates from 'Core/Geographic/Coordinates';
-import DEMUtils from 'Utils/DEMUtils';
-import { Matrix4, Vector3 } from 'three';
 
-async function shutdownXR(session) {
-    if (session) {
-        await session.end();
-    }
-}
+
+
 function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
     const m = projectionMatrix.elements;
 
@@ -33,57 +27,40 @@ function extractCameraAttributesFromProjectionMatrix(projectionMatrix) {
  * @param {*} options webXR, callback
  */
 const initializeWebXR = (view, options) => {
-    const scale = options.scale || 1.0;
-    const camera = view.camera.camera3D;
-
     const xr = view.renderer.xr;
     xr.addEventListener('sessionstart', () => {
-        const vrHeadSet = new THREE.Object3D();
-        vrHeadSet.name = 'xrHeadset';
-
-        // view.scene.scale.multiplyScalar(scale);
-
-        const xrControllers = initControllers(xr, vrHeadSet);
-
-        // To avoid controllers precision issues, headset should handle camera position and camera should be reset to origin
-        view.scene.add(vrHeadSet);
-        // view.camera.camera3D.updateMatrixWorld(true);
-
-        //
-        view.camera.camera3D.getWorldPosition(vrHeadSet.position);
-        view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
-
-        vrHeadSet.updateMatrixWorld(true);
-
-
         xr.getReferenceSpace('local');
 
+        // To avoid controllers precision issues, headset should handle camera position
+        const vrHeadSet = new THREE.Object3D();
+        vrHeadSet.name = 'xrHeadset';
+        view.scene.add(vrHeadSet);
 
+        view.camera.camera3D.getWorldPosition(vrHeadSet.position);
+        view.camera.camera3D.getWorldQuaternion(vrHeadSet.quaternion);
+        vrHeadSet.updateMatrixWorld(true);
         vrHeadSet.add(xr.getCamera());
 
-        view.camXR = view.camera.camera3D.clone();      // placeholder camera to initialize correctly the vr, which needs a parent
-
+        // Placeholder camera to initialize correctly the vr, which needs a parent
+        view.camXR = view.camera.camera3D.clone();
 
         // Important to see the controllers -> maybe could be improved
         view.camXR.far = 2000000;
         view.camXR.near = 0.1;
+        view.camXR.updateProjectionMatrix();
 
-        view.camXR.updateMatrixWorld(true);
+        // view.camXR.updateMatrixWorld(true);
         vrHeadSet.add(view.camXR);
 
         view.notifyChange();
 
-        const init = 0;
+        const xrControllers = initControllers(xr, vrHeadSet);
+
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
-                // if (init === 0) {
-                //     init++;
-                //     // view.mainLoop.step(view, timestamp);
-                // } else if (init === 1) {
-                //     init++;
                 /* This is what's done in updateUserCamera the WebXRManager.js of threejs
                  Update projectionMatrix, could be replaced by:
                 camera.projectionMatrix.copy( cameraXR.projectionMatrix );
@@ -100,10 +77,6 @@ const initializeWebXR = (view, options) => {
                 view.camera3D.fov = fov;
                 view.camera3D.zoom = 1;
                 view.camera3D.updateProjectionMatrix();
-                // }
-                // init = false;
-
-                // }
 
                 xr.getCamera().getWorldPosition(view.camera3D.position);
                 xr.getCamera().getWorldQuaternion(view.camera3D.quaternion);
@@ -123,11 +96,6 @@ const initializeWebXR = (view, options) => {
                 if (xrControllers.right) {
                     listenGamepad(xrControllers.right);
                 }
-                //
-                // resyncControlCamera();
-                // //
-                computeDistanceToGround();
-                // updateFarDistance();
                 if (options.callback) {
                     options.callback();
                 }
@@ -137,26 +105,14 @@ const initializeWebXR = (view, options) => {
                 //     view.scene.updateMatrixWorld();
                 // }
                 //
-                view.notifyChange(vrHeadSet, true);
+                // view.notifyChange(vrHeadSet, true);
                 view.notifyChange(view.camera.camera3D, true);
             }
             view.mainLoop.step(view, timestamp);
         });
     });
 
-    function resyncControlCamera() {
-        // search for other this.camera in Itowns code for perfs issues
-        view.controls.camera.position.copy(view.camera.camera3D.position);
-        view.controls.camera.rotation.copy(view.camera.camera3D.rotation);
-    }
 
-    function computeDistanceToGround() {
-        view.camera.elevationToGround = view.controls.getCameraCoordinate().altitude;
-    }
-
-    function updateFarDistance() {
-        view.camera.camera3D.far =  Math.min(Math.max(view.camera.elevationToGround * 1000, 10000), 100000);
-    }
 
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
@@ -229,10 +185,7 @@ const initializeWebXR = (view, options) => {
             this.remove(this.children[0]);
         });
         controller.addEventListener('connected', (event) => {
-            // this.add(buildController(event.data));
-            // {XRInputSource} event.data
             controller.gamepad = event.data.gamepad;
-            // controller.inputSource = event.data;
         });
         controller.addEventListener('itowns-xr-button-released', (event) => {
             const ctrl = event.message.controller;
@@ -247,19 +200,6 @@ const initializeWebXR = (view, options) => {
 
     function bindGripController(controllerModelFactory, gripController, vrHeadSet) {
         gripController.add(controllerModelFactory.createControllerModel(gripController));
-        const righthand = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.05, 0.05, 0.4, 16, 1, true),
-            new THREE.MeshBasicMaterial({
-                color: 0x00ff88,
-                wireframe: true,
-            }),
-        );
-        const controllerGrip1 = xr.getControllerGrip(1);
-        controllerGrip1.addEventListener('connected', () => {
-            controllerGrip1.add(righthand);
-        });
-        // vrHeadSet.add(controllerGrip1);
-
         vrHeadSet.add(gripController);
     }
 };

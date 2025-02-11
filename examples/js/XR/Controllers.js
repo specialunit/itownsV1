@@ -59,7 +59,6 @@ function bindListeners(index) {
 
 function clampAndApplyTransformationToXR(trans, offsetRotation) {
     const transClamped = clampToGround(trans);
-    // const transClamped = trans;
     applyTransformationToXR(transClamped, offsetRotation);
 }
 
@@ -108,7 +107,7 @@ function clampToGround(trans) {
 
 
 function getSpeedFactor() {
-    const speedFactor = Math.min(Math.max(view.camera.elevationToGround / 50, 2), 2000);
+    const speedFactor = Math.min(Math.max(view.controls.getCameraCoordinate().altitude / 50, 2), 2000);
     return speedFactor * 10;    //  todo remove *10
 }
 
@@ -116,7 +115,7 @@ function getTranslationZ(axisValue, speedFactor) {
     // flying following the locked camera look at
     const speed = axisValue * speedFactor;
     const matrixHeadset = new itowns.THREE.Matrix4();
-    matrixHeadset.identity().extractRotation(view.camera.camera3D.matrixWorld);
+    matrixHeadset.identity().extractRotation(view.camera3D.matrixWorld);
     const directionY = new itowns.THREE.Vector3(0, 0, 1).applyMatrix4(matrixHeadset).multiplyScalar(speed);
     return directionY;
 }
@@ -182,9 +181,9 @@ function cameraOnFly(ctrl) {
     const offsetRotation = getRotationYaw();
     const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
 
-    applyTransformationToXR(trans, offsetRotation);
+    // applyTransformationToXR(trans, offsetRotation);
     //
-    // clampAndApplyTransformationToXR(trans, offsetRotation);
+    clampAndApplyTransformationToXR(trans, offsetRotation);
 }
 
 
