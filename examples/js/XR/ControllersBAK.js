@@ -16,6 +16,7 @@ let view;
 let controller1;
 let controller2;
 const cache = {};
+let groupXR;
 
 /**
  * Controller.userData {
@@ -27,6 +28,7 @@ const cache = {};
  */
 Controllers.addControllers = (_view) => {
     view = _view;
+    groupXR = _view._camXR.parent;
     // vrHeadSet = view.camXR.parent;
     renderer = view.mainLoop.gfxEngine.renderer;
     controller1 = bindListeners(0);
@@ -64,11 +66,10 @@ function clampAndApplyTransformationToXR(trans, offsetRotation) {
 
 
 function applyTransformationToXR(trans, offsetRotation) {
-    const vrHead = view._camXR.parent;
 
     if (!offsetRotation) {
         console.error('missing rotation quaternion');
-        offsetRotation = vrHead.quaternion;
+        offsetRotation = groupXR.quaternion;
         // return;
     }
     if (!trans) {
@@ -77,11 +78,9 @@ function applyTransformationToXR(trans, offsetRotation) {
     }
 
 
-    vrHead.position.copy(trans);
-    vrHead.quaternion.copy(offsetRotation);
-    // vrHead.quaternion.copy(vrHead.quaternion);
-
-    vrHead.updateMatrixWorld(true);
+    groupXR.position.copy(trans);
+    groupXR.quaternion.copy(offsetRotation);
+    groupXR.updateMatrixWorld(true);
 }
 
 /**
@@ -113,8 +112,11 @@ function getSpeedFactor() {
 
 
 function getRotationYaw(axisValue) {
-    // Get the current camera's orientation
-    const baseOrientation = view._camXR.parent.quaternion.clone();
+    // Get the current XR group orientation
+    const baseOrientation = groupXR.quaternion.clone();
+    // const baseOrientation = view.renderer.xr.getCamera().quaternion.clone().normalize();
+    // const baseOrientation = view.camera3D.quaternion.clone().normalize();
+
     //  Don't use the directly the camera
     let deltaRotation = 0;
     // Update deltaRotation based on the controller’s axis input
@@ -144,9 +146,14 @@ function getTranslationElevation(axisValue, speedFactor) {
 
 function cameraOnFly(ctrl) {
     if (!ctrl.flyDirectionQuat) {
-        // locking camera look at
-        // FIXME using {view.camera.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction.
-        ctrl.flyDirectionQuat = view.camera.camera3D.quaternion.clone().normalize();
+        // locking camera look at (using camera3D get us the orientation on the headset)
+        // FIXME using {view.camera3D.matrixWorld} or normalized quaternion produces the same effect and shift to the up direction
+        ctrl.flyDirectionQuat = view.camera3D.quaternion.clone().normalize();
+
+        // ctrl.flyDirectionQuat = new itowns.THREE.Quaternion();
+        // view.renderer.xr.getCamera().getWorldQuaternion(ctrl.flyDirectionQuat);
+        // ctrl.flyDirectionQuat = ctrl.flyDirectionQuat.normalize();
+
         console.log('fixing rotation quat', ctrl.flyDirectionQuat);
     }
     if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
@@ -166,7 +173,8 @@ function cameraOnFly(ctrl) {
     }
 
     const offsetRotation = getRotationYaw();
-    const trans = view.camera.camera3D.position.clone().add(directionX.add(directionZ));
+    // Get the position of the XR group
+    const trans = groupXR.position.clone().add(directionX.add(directionZ));
 
     // applyTransformationToXR(trans, offsetRotation);
     //
@@ -216,7 +224,9 @@ function onRightButtonPressed(data) {
         const offsetRotation = getRotationYaw();
         const speedFactor = getSpeedFactor();
         const deltaTransl = getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
-        const trans = view.camera.camera3D.position.clone().add(deltaTransl);
+        // const trans = view.camera3D.position.clone().add(deltaTransl);
+        // Get the position of the XR group
+        const trans = groupXR.position.clone().add(deltaTransl);
         clampAndApplyTransformationToXR(trans, offsetRotation);
     }
 }
@@ -262,12 +272,12 @@ function onLeftAxisChanged(data) {
     // Determine the translation based on the cache status
     let trans = cache.isFixedPosition
         ? cache.position.clone()
-        : view.camera.camera3D.position.clone();
+        : view.camera3D.position.clone();
 
     // If not moving right and position is not fixed, fix the camera position in cache
     if (!isMovingRight && !cache.isFixedPosition) {
-        cache.position = view.camera.camera3D.position.clone();
-        trans = view.camera.camera3D.position.clone();
+        cache.position = view.camera3D.position.clone();
+        trans = view.camera3D.position.clone();
         cache.isFixedPosition = true;
     }
     const quat = getRotationYaw(ctrl.gamepad.axes[2]);
