@@ -7,11 +7,11 @@ Controllers.MIN_DELTA_ALTITUDE = 1.8;
 
 
 
-const trackPositionActive = true;
 const isMovingRight = false;
 
 let view;
-let contextXR;
+let controller1;
+let controller2;
 const cache = {};
 
 /**
@@ -21,15 +21,13 @@ const cache = {};
  * }
  * requires a contextXR variable.
  * @param {*} _view itowns view object
- * @param {*} _contextXR itowns WebXR context object
  */
-Controllers.addControllers = (_view, _contextXR) => {
+Controllers.addControllers = (_view) => {
     view = _view;
     // vrHeadSet = view.camXR.parent;
-    contextXR = _contextXR;
     renderer = view.mainLoop.gfxEngine.renderer;
-    const controller1 = bindListeners(0);
-    const controller2 = bindListeners(1);
+    controller1 = bindListeners(0);
+    controller2 = bindListeners(1);
     controller1.addEventListener('itowns-xr-axes-changed', onLeftAxisChanged);
     controller2.addEventListener('itowns-xr-axes-changed', onRightAxisChanged);
     controller2.addEventListener('itowns-xr-axes-stop', onRightAxisStop);
@@ -44,10 +42,6 @@ Controllers.addControllers = (_view, _contextXR) => {
     controller2.addEventListener('selectend', onSelectRightEnd);
 
 
-
-
-    contextXR.controller1 = controller1;
-    contextXR.controller2 = controller2;
 
     // init cache
     cache.position = null;
@@ -79,10 +73,7 @@ function applyTransformationToXR(trans, offsetRotation) {
         console.error('missing translation vector');
         return;
     }
-    if (trackPositionActive) {
-        XRUtils.addPositionPoints('cameraPositionsPoints', trans, 0xb51800, 30, true);
-        XRUtils.addPositionSegment('cameraPositionsLine', trans, 0xffffff, 1, true);
-    }
+
 
     vrHead.position.copy(trans);
     vrHead.quaternion.copy(offsetRotation);
@@ -110,19 +101,6 @@ function clampToGround(trans) {
     }
     return coordsProjected.as(view.referenceCrs).toVector3();
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -225,11 +203,11 @@ function onSelectLeftStart(ctrl) {
 function onSelectLeftEnd(ctrl) {
     // First left click while right selecting locks the teleportation target.
     // Second left click cancels the teleportation target.
-    if (contextXR.controller2.userData.lockedTeleportPosition) {
-        contextXR.controller2.userData.isSelecting = false;
+    if (controller2.userData.lockedTeleportPosition) {
+        controller2.userData.isSelecting = false;
     }
-    if (contextXR.controller2.userData.isSelecting) {
-        contextXR.controller2.userData.lockedTeleportPosition = true;
+    if (controller2.userData.isSelecting) {
+        controller2.userData.lockedTeleportPosition = true;
     }
 }
 
@@ -284,7 +262,6 @@ function onLeftAxisChanged(data) {
     }
     const quat = getRotationYaw(ctrl.gamepad.axes[2]);
     applyTransformationToXR(trans, quat);
-
 }
 
 // Function called when the right axis stops changing
@@ -294,8 +271,7 @@ function onRightAxisStop(data) {
 
 // Function called when the left axis stops changing
 function onLeftAxisStop(data) {
-    // No operation currently defined.
-
+    cache.isFixedPosition = false;
 }
 
 // Function called when the right button is released

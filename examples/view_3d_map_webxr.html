@@ -35,7 +35,6 @@
         <script src="js/GUI/GuiTools.js"></script>
         <script src="js/GUI/LoadingScreen.js"></script>
         <script src="js/XR/Controllers.js"></script>
-        <script src="js/XR/Utils.js"></script>
 
         <script type="module">
             import { VRButton } from 'three/addons/webxr/VRButton.js';
@@ -62,25 +61,15 @@
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
-            const contextXR = {
-                showDebug: false, // used by /js/XR/Utils.js
-                tempMatrix: new itowns.THREE.Matrix4(),
-                coordOnCamera: {},
-                interactiveLayers : [],
-                secondCamera: { renderTarget: new itowns.THREE.WebGLRenderTarget(512, 512) }
-            };
+
 
             const scale = 1;
 
             // Create a GlobeView
 
 
-            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { scale: scale, callback: render } });
-            // const view = new itowns.GlobeView(viewerDiv, placement, {
-            //     webXR: { scale: 0.005 },
-            // });
-            // Temporary workaround to https://github.com/iTowns/itowns/issues/2473 + without it, controllers don't update
-            view.scene.matrixWorldAutoUpdate = true;
+            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { scale: scale} });
+
 
             // Setup loading screen and debug menu
             setupLoadingScreen(viewerDiv, view);
@@ -103,23 +92,15 @@
             // Create a new Layer 3d-tiles For Pointcloud
 
             const source = new itowns.OGC3DTilesSource({ url: "https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json" });
-            contextXR.pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
+            const pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
                 source,
                 pntsSizeMode:1
 
             },);
 
             view.addLayer(
-                contextXR.pointLayer
+                pointLayer
             );
-            // var geodesic  = view.controls.getCameraCoordinate();
-            // var deltaPointCloud = geodesic.geodesicNormal.clone().multiplyScalar(-46);
-
-            // contextXR.pointLayer.object3d.position.add(deltaPointCloud);
-            // contextXR.interactiveLayers.push(contextXR.pointLayer.object3d);
-
-            // view.addLayer(contextXR.pointLayer); doesn't work. Those little thing that takes time to figure out
-            // itowns.View.prototype.addLayer.call(view, contextXR.pointLayer);
 
             // add building layer
 
@@ -151,353 +132,20 @@
 
 
 
-            // ------------- webxr interaction ----------------
-            // view.scene.matrixWorldAutoUpdate = true;
-
-            initXR();
-
-            function addXRObjects() {
-                contextXR.raycaster = new itowns.THREE.Raycaster();
-
-                var cameraTargetPosition = view.controls.getCameraCoordinate().clone();
-                var meshCoord =  new itowns.Coordinates(cameraTargetPosition.crs, cameraTargetPosition.x, cameraTargetPosition.y, cameraTargetPosition.z );
-                meshCoord.altitude -= 10050;
-
-                contextXR.raycaster.ray.origin.copy(meshCoord.as(view.referenceCrs));
-                contextXR.floor = new itowns.THREE.Mesh(
-					new itowns.THREE.PlaneGeometry( 10000, 10000, 1, 1 ),
-					new itowns.THREE.MeshBasicMaterial( { color: 0x222222, side: itowns.THREE.DoubleSide } )
-				);
-                contextXR.floor.name = "floor";
-                // position and orientation of the mesh
-                contextXR.floor.position.copy(meshCoord.as(view.referenceCrs));
-                contextXR.floor.lookAt(new itowns.THREE.Vector3(0, 0, 0));
-
-                // update coordinate of the mesh
-                contextXR.floor.updateMatrixWorld();
-                // add the mesh to the scene
-                view.scene.add(contextXR.floor);
-
-                meshCoord.altitude += 1;
-                contextXR.marker = new itowns.THREE.Mesh(
-					new itowns.THREE.CircleGeometry( 50, 32 ),
-					new itowns.THREE.MeshBasicMaterial( { color: 0xbcbcbc, side: itowns.THREE.DoubleSide } )
-				);
-                contextXR.marker.position.copy(meshCoord.as(view.referenceCrs));
-                contextXR.marker.lookAt(new itowns.THREE.Vector3(0, 0, 0));
-                contextXR.marker.name = "marker";
-                contextXR.marker.updateMatrixWorld();
-				view.scene.add(contextXR.marker);
-
-                view.notifyChange();
-            }
-
-            function loadBuildingGltf() {
-                                // Load a glTF resource
-                                itowns.glTFLoader.load(
-                // resource URL, do not commit as is.
-                "myGLB.glb",
-
-
-                // called when the resource is loaded
-                (gltf) => {
-                    gltf.scene.position.copy(new itowns.THREE.Vector3(4486191.121470811, 477820.22721133975, 4495989.354518597));
-
-                    gltf.scene.lookAt(new itowns.THREE.Vector3(0, 0, 0));
-                    gltf.scene.rotateX(Math.PI / 2);
-                    gltf.scene.rotateX(Math.PI);
-
-                    // update coordinate of the mesh
-                    gltf.scene.updateMatrixWorld();
-                    const gltfBbox = new itowns.THREE.Box3();
-                    gltfBbox.setFromObject(gltf.scene);
-
-                    view.scene.add(gltf.scene);
-                    const helper = new itowns.THREE.Box3Helper( gltfBbox, 0xffff00 );
-                    helper.name="bboxGltfHelper";
-                    helper.visible = false;
-                    view.scene.add(helper);
-                    var gltfBox = XRUtils.generateVRBox(gltf.scene);
-                    applyGltfBoxToCHilds(gltf.scene, gltfBox);
-                    contextXR.interactiveLayers.push(gltf.scene);
-                    gltf.VRBbox = helper;
-                    view.notifyChange();
-                },
-                // called while loading is progressing
-                () => {},
-                // called when loading has errors
-                (error) => {
-                    // eslint-disable-next-line no-console
-                    console.log("An error happened :");
-                    // eslint-disable-next-line no-console
-                    console.log(error);
-                });
-
-                function applyGltfBoxToCHilds(gltfScene, gltfBox) {
-                    gltfScene.traverse(o => {
-                        o.VRBbox = gltfBox;
-                    });
-                }
-            }
-
-
-            function initXR() {
-                contextXR.renderer = view.mainLoop.gfxEngine.renderer;
-                Controllers.addControllers(view, contextXR);
-                contextXR.renderer.xr.enabled = true;
-                return;
-                addXRObjects();
-
-                 contextXR.renderer.xr.addEventListener( 'sessionstart', function ()
-                 {
-
-                    document.addEventListener('keydown', function listenDebug(evt) {
-                        console.log(evt, 'pressed');
-                    });
-                    contextXR.baseReferenceSpace = contextXR.renderer.xr.getReferenceSpace();
-                    view.scene.children.forEach((child) => {if(child.name === 'xrHeadset') { contextXR.xrHeadSet = child;} });
-
-                    var testPicking = XRUtils.showPosition('testPicking', new itowns.THREE.Vector3(4486512.584368641, 476258.50340769894, 4497781.931009745), 0xf9429e, 25, true);
-                    // contextXR.interactiveLayers.push(testPicking);
-                    var testPickingBbox = XRUtils.showPosition('testPickingConcrete', new itowns.THREE.Vector3(4486480, 476250, 4497781.931009745), 0x000000, 25, true);
-                    XRUtils.generateVRBox(testPickingBbox);
-                    // contextXR.interactiveLayers.push(testPickingBbox);
-                    contextXR.interactiveLayers = contextXR.interactiveLayers.concat(view.tileLayer.level0Nodes);
-
-                   // const orbitControls = new itowns.THREE.OrbitControls( view.controls.camera, contextXR.renderer.domElement );
-                   // orbitControls.target = gltf.centor vector
-                 });
-            }
-
-            /**
-             *  try to performs terrain intersection by pixel reading from a camera set onto controller coordinates.
-             *  FIXME Needs fixes for terrain intersection.
-             *  Distances got in return doesn't allow to know if we reached the far distance without intersecting nothing
-             *  Distances got from an intersection is wrong.
-             */
-            function intersectInteractiveLayers() {
-                if(!contextXR.controller2 || !contextXR.cameraRightGrp.camera) {
-                    return [];
-                }
-                contextXR.controller2.updateMatrixWorld();
-                // test intersection coordinate with terrain
-                contextXR.tempMatrix.identity().extractRotation(contextXR.controller2.matrixWorld);
-                contextXR.raycaster.ray.origin.setFromMatrixPosition(contextXR.controller2.matrixWorld);
-                contextXR.raycaster.ray.direction.set(0, 0, -1).applyMatrix4( contextXR.tempMatrix);
-
-                return contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
-
-               // FIXME, doesn't work + really perf consuming
-               // tryCameraIntersection();
-            }
-
-            function tryCameraIntersection() {
-                contextXR.cameraRightGrp.camera.position.copy(contextXR.raycaster.ray.origin);
-                contextXR.cameraRightGrp.camera.lookAt(contextXR.cameraRightGrp.camera.position.clone().add(contextXR.raycaster.ray.direction));
-                contextXR.cameraRightGrp.camera.updateProjectionMatrix();
-                contextXR.cameraRightGrp.cameraHelper.update();
-                // pick terrain coordinate from controller camera
-                var pickedValueRightCamera = new itowns.THREE.Vector3();
-                // view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
-                view.getPickingPositionFromDepth(null, pickedValueRightCamera);
-                // var testPicking = view.pickObjectsAt(0,0); // TODO change camera
-
-                if(pickedValueRightCamera) {
-                    // console.log('result');
-                }else{
-                    // console.log('no result');
-                }
-/**
-                if(testPicking.length > 0) {
-                    // XRUtils.updateBboxVisibility(testPicking[0].object); doesn't give the expected bbox
-                    view.getPickingPositionFromDepth(null, pickedValueRightCamera, contextXR.cameraRightGrp.camera);
-                   // XRUtils.showPosition('accuratePsositon', pickedValueRightCamera, 0xb518c7, 30, true);
-                  //  XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb51800,30, true);
-                }
-                */
-
-               // var pickedValueRightCamera = itowns.CameraUtils.getTransformCameraLookingAtTarget(view, contextXR.cameraRightGrp.camera).coord;
-
-                // XRUtils.addPositionPoints('terrainPickAccurate', pickedValueRightCamera, 0xb518c7,30, true);
-                // console.log(pickedValue, pickedValueRightCamera);
-
-
-               var coordOnterrain = new itowns.Coordinates(view.controls.getCameraCoordinate().crs, pickedValueRightCamera.x,pickedValueRightCamera.y,pickedValueRightCamera.z);
-               // XRUtils.showPositionVerticalLine('better_terrain_intersectt', pickedValueRightCamera, 0xb518c7, 1000, true);
-
-
-                var pointer = new itowns.THREE.Vector2(0,0);
-                // try to pick from hand camera
-                contextXR.raycaster.setFromCamera(pointer, contextXR.cameraRightGrp.camera);
-                // intersect ok for gltf and 3dtiles, not for terrain elevation as we don't have a geometry of the elevation.
-                var test = contextXR.raycaster.intersectObjects(contextXR.interactiveLayers);
-                return test;
-            }
-
-            function render() {
-                return;
-                if(!contextXR.controller2.userData.isSelecting) {
-                    // if not selecting reset previous state
-                    contextXR.INTERSECTION = undefined;
-                }
-                if (!contextXR.controller2.userData.lockedTeleportPosition) {
-                    contextXR.INTERSECTION = undefined;
-                    const intersects = intersectInteractiveLayers();
-                    if (intersects && intersects.length > 0 ) {
-                        XRUtils.updateBboxVisibility(intersects[0].object);
-                        updateIntersectionMarker(intersects[0]);
-                        if (contextXR.controller2.userData.isSelecting === true) {
-                            contextXR.INTERSECTION = intersects[ 0 ].point;
-                            if(view.meshPointer) {
-                                view.meshPointer.visible = false;
-                            }
-                        }
-                    } else if (contextXR.visibleBbox) {
-                        contextXR.visibleBbox.visible = false;
-                        contextXR.visibleBbox = undefined;
-                    }
-                }
-
-                if ( contextXR.INTERSECTION )
-                {
-                    var intersectionCoord = new itowns.Coordinates(view.referenceCrs, contextXR.INTERSECTION.x, contextXR.INTERSECTION.y, contextXR.INTERSECTION.z);
-                    var justElevationAt = itowns.DEMUtils.getElevationValueAt(view.tileLayer,  view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
-                    getJumpCoordinate(intersectionCoord);
-
-                    var cameraFloorIntersect = view.controls.getCameraCoordinate().clone();
-                    // FIXME result is not stricly the camera position as expected, maybe due to the intersection position?
-                    // FIXME getCameraCoordinate doesn't update on webxr camera move, maybe test it in "unbounded" / "bounded" context
-                    var cameraTargetPosition = view.controls.getCameraCoordinate().clone();
-                    /* the staircase effect find explanation in regard of view.camera.camera3D.position z evolution
-                    for some reason, position is highly rounded when not to initial vr pos.
-                    but camera matrices seems like in the same level of definition...
-                    */
-                    cameraFloorIntersect.altitude = justElevationAt;
-                    XRUtils.showPosition('findMeCamera', cameraFloorIntersect.as(view.referenceCrs), 0x44aaff, 100, true);
-
-                    // showing camera floor intersection
-                    contextXR.marker.position.copy(cameraFloorIntersect.as(view.referenceCrs));
-                } else {
-                    // if no more intersection, reset coords.
-                    XRUtils.removeReference('positionJumpDebug')
-                    XRUtils.removeReference('positionJump');
-                    XRUtils.removeReference('findMeCamera');
-                    XRUtils.removeReference('verticalAxisJump');
-                    contextXR.coordOnCamera = undefined;
-                }
-                contextXR.marker.visible = contextXR.INTERSECTION !== undefined;
-            }
-
-            function updateIntersectionMarker(intersectionObject){
-                var intersectionVector = intersectionObject.point;
-                if(intersectionObject.object.type === 'Points') {
-                    if(view.meshPointer){
-                        view.meshPointer.visible = false;
-                    }
-
-                    XRUtils.showPosition('pointsIntersections', intersectionVector, 0xfeff00, view.camera.camera3D.position.distanceTo(intersectionVector) / 100, false);
-                }
-                else {
-                    XRUtils.removeReference('pointsIntersections');
-                    // update marker on terrain position
-                    var intersectPosition = new itowns.Coordinates(view.referenceCrs);
-                    intersectPosition.setFromVector3(intersectionVector);
-                    var coordIntersectedMappedOnLayer = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectPosition, itowns.DEMUtils.PRECISE_READ_Z);
-                    if(view.meshPointer && coordIntersectedMappedOnLayer) {
-                        view.meshPointer.visible = true;
-                        view.meshPointer.position.copy(coordIntersectedMappedOnLayer.coord.as(view.referenceCrs));
-                    }
-                }
-
-            }
-
-            function getJumpCoordinate(intersectionCoord) {
-                // not a {itowns.Coordinates}
-                var coordOnCamera = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, intersectionCoord, itowns.DEMUtils.PRECISE_READ_Z);
-                var coordIntersectItowns = coordOnCamera.coord.clone().as('EPSG:4326');
-                // update jump target altitude.
-                if (contextXR.coordOnCamera && contextXR.deltaAltitude) {
-                    if(coordOnCamera.coord.altitude + contextXR.deltaAltitude < coordOnCamera.coord.altitude + Controllers.MIN_DELTA_ALTITUDE) {
-                        contextXR.deltaAltitude = Controllers.MIN_DELTA_ALTITUDE;
-                    }
-                    coordOnCamera.coord.altitude += contextXR.deltaAltitude;
-                } else {
-                     // by default set altitude to the current camera elevation from terrain
-                     let cameraCoordOnTerrain = itowns.DEMUtils.getTerrainObjectAt(view.tileLayer, view.controls.getCameraCoordinate().clone(), itowns.DEMUtils.PRECISE_READ_Z);
-                     coordOnCamera.coord.altitude += cameraCoordOnTerrain.coord.z;
-                     contextXR.deltaAltitude = cameraCoordOnTerrain.coord.z;
-                }
-
-                // must clone Coordinate to avoid side effect, maybe with DEMUtils, but not sure.
-                contextXR.coordOnCamera = new itowns.Coordinates(coordOnCamera.coord.crs);
-                contextXR.coordOnCamera.setFromVector3(coordOnCamera.coord);
-                XRUtils.showPosition('positionJump',  contextXR.coordOnCamera.as(view.referenceCrs), 0xfe0c00, 30, false);
-                XRUtils.showPositionVerticalLine('verticalAxisJump', intersectionCoord, 0xfe0c00, 10000, false);
-                XRUtils.showPosition('positionJumpDebug', intersectionCoord, 0xfeff00, 5500, true);
-            }
-
-            //---------  add fake to ground
-
-            function addMeshToScene() {
-                // creation of the new mesh (a cylinder)
-                // var THREE = itowns.THREE;
-                // var geometry = new THREE.CylinderGeometry(0, 10, 60, 8);
-                // var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-                // var meshPointer = new THREE.Mesh(geometry, material);
-
-                // get the position on the globe, from the camera
-                // var cameraTargetPosition = view.controls.getLookAtCoordinate();
-                view.controls.getLookAtCoordinate();
-
-                // // position of the mesh
-                // var meshCoord = cameraTargetPosition.clone();
-                // meshCoord.altitude += 30;
-                //
-                // // position and orientation of the mesh
-                // meshPointer.position.copy(meshCoord.as(view.referenceCrs));
-                // meshPointer.lookAt(new THREE.Vector3(0, 0, 0));
-                // meshPointer.rotateX(Math.PI / 2);
-                //
-                // // update coordinate of the mesh
-                // meshPointer.updateMatrixWorld();
-
-                // add the mesh to the scene
-                // view.scene.add(meshPointer);
-
-                // make the object usable from outside of the function
-                // view.meshPointer = meshPointer;
-                // view.notifyChange();
-            }
 
             // Listen for globe full initialisation event
-
             view.addEventListener(itowns.GLOBE_VIEW_EVENTS.GLOBE_INITIALIZED, function globeInitialized() {
-                // eslint-disable-next-line no-console
                 console.info('Globe initialized');
-                //
-                // // Instantiate three's VR Button
-                // const vrButton = VRButton.createButton(view.renderer);
-                // viewerDiv.appendChild(vrButton);
-
-
-               // addMeshToScene();
             });
 
-
-            // Instantiate three's VR Button
-            const vrButton = VRButton.createButton(view.renderer);
-            viewerDiv.appendChild(vrButton);
 
 
             // Add the UI Debug
             var d = new debug.Debug(view, menuGlobe.gui);
             debug.createTileDebugUI(menuGlobe.gui, view, view.tileLayer, d);
-            debug.create3dTilesDebugUI(menuGlobe.gui, view, contextXR.pointLayer, d);
+            debug.create3dTilesDebugUI(menuGlobe.gui, view, pointLayer, d);
 
-            d.switch = function() {
-                Controllers.change3DTileRepresentation();
-            }
-            menuGlobe.gui.add(d, 'switch').name('Mode Switch');
+
 
             // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
 
@@ -511,6 +159,22 @@
             itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
             // must keep it, Failed to execute 'updateRenderState' on 'XRSession': Failed to read the 'depthFar' property from 'XRRenderStateInit': The provided double value is non-finite.
             itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+
+
+            initXR();
+
+            function initXR() {
+                view.renderer.xr.enabled = true;
+                // Temporary workaround to https://github.com/iTowns/itowns/issues/2473 + without it,controllers don't update
+                view.scene.matrixWorldAutoUpdate = true;
+
+                // Instantiate three's VR Button
+                const vrButton = VRButton.createButton(view.renderer);
+                viewerDiv.appendChild(vrButton);
+                Controllers.addControllers(view);
+            }
+
+
         </script>
     </body>
 </html>
