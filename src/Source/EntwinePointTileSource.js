@@ -31,11 +31,17 @@ class EntwinePointTileSource extends Source {
         this.isEntwinePointTileSource = true;
         this.colorDepth = config.colorDepth;
 
+        this.fetcher = Fetcher.arrayBuffer;
+
         // Necessary because we use the url without the ept.json part as a base
         this.url = this.url.replace('/ept.json', '');
 
         // https://entwine.io/entwine-point-tile.html#ept-json
         this.whenReady = Fetcher.json(`${this.url}/ept.json`, this.networkOptions).then((metadata) => {
+            this.boundsConforming = metadata.boundsConforming;
+            this.bounds = metadata.bounds;
+            this.span = metadata.span;
+
             // Set parser and its configuration from schema
             this.parse = metadata.dataType === 'laszip' ? LASParser.parse : PotreeBinParser.parse;
             this.extension = metadata.dataType === 'laszip' ? 'laz' : 'bin';
@@ -59,20 +65,8 @@ class EntwinePointTileSource extends Source {
                 }
             }
 
-            // NOTE: this spacing is kinda arbitrary here, we take the width and
-            // length (height can be ignored), and we divide by the specified
-            // span in ept.json. This needs improvements.
-            this.spacing = (Math.abs(metadata.boundsConforming[3] - metadata.boundsConforming[0])
-                + Math.abs(metadata.boundsConforming[4] - metadata.boundsConforming[1])) / (2 * metadata.span);
-
-            this.boundsConforming = metadata.boundsConforming;
-            this.bounds = metadata.bounds;
-            this.span = metadata.span;
-
             return this;
         });
-
-        this.fetcher = Fetcher.arrayBuffer;
     }
 }
 

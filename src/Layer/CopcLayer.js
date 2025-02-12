@@ -39,25 +39,21 @@ class CopcLayer extends PointCloudLayer {
 
         const resolve = () => this;
         this.whenReady = this.source.whenReady.then((/** @type {CopcSource} */ source) => {
-            const { cube, rootHierarchyPage } = source.info;
-            const { pageOffset, pageLength } = rootHierarchyPage;
+            const { cube } = source.info;
+            const { pageOffset, pageLength } = source.info.rootHierarchyPage;
 
-            this.root = new CopcNode(0, 0, 0, 0, pageOffset, pageLength, this, -1);
-            this.root.bbox.min.fromArray(cube, 0);
-            this.root.bbox.max.fromArray(cube, 3);
-
-            this.minElevationRange = this.minElevationRange ?? source.header.min[2];
-            this.maxElevationRange = this.maxElevationRange ?? source.header.max[2];
-
+            this.spacing = source.info.spacing;
             this.scale = new THREE.Vector3(1.0, 1.0, 1.0);
             this.offset = new THREE.Vector3(0.0, 0.0, 0.0);
 
+            this.setElevationRange(source.header.min[2], source.header.max[2]);
+
+            this.root = new CopcNode(0, 0, 0, 0, pageOffset, pageLength, this, -1);
+
+            this.setRootBbox(cube.slice(0, 3), cube.slice(3, 6));
+
             return this.root.loadOctree().then(resolve);
         });
-    }
-
-    get spacing() {
-        return this.source.info.spacing;
     }
 }
 
