@@ -222,10 +222,11 @@ class VRControls {
 
     // Right axis changed.
     onRightAxisChanged(data) {
-        if (data.target.name !== 'rightController') {
+        const ctrl = data.message.controller;
+
+        if (ctrl.userData.handedness !== 'right') {
             return;
         }
-        const ctrl = data.message.controller;
         //  Check if GRIP is pressed
         if (this.rightButtonPressed) {
             const offsetRotation = this.getRotationYaw();
@@ -240,10 +241,11 @@ class VRControls {
 
     // Left axis changed.
     onLeftAxisChanged(data) {
-        if (data.target.name !== 'leftController') {
+        const ctrl = data.message.controller;
+
+        if (ctrl.userData.handedness !== 'left') {
             return;
         }
-        const ctrl = data.message.controller;
         const trans = this.groupXR.position.clone();
 
         const quat = this.getRotationYaw(ctrl.gamepad.axes[2]);
@@ -263,7 +265,6 @@ class VRControls {
     // Right button released.
     onRightButtonReleased(data) {
     // No operation defined.
-        console.log('eeeeeeeeeeee');
         this.rightButtonPressed = false;
     }
 

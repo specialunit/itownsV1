@@ -11,6 +11,7 @@ import { VRControls } from 'Main.js';
 const initializeWebXR = (view, options) => {
     const xr = view.renderer.xr;
     xr.enabled = true;
+    const xrControllers = [];
 
     xr.addEventListener('sessionstart', () => {
         xr.getReferenceSpace('local');
@@ -38,7 +39,8 @@ const initializeWebXR = (view, options) => {
 
         view.notifyChange();
 
-        const xrControllers = initControllers(xr, vrHeadSet);
+        // const xrControllers = initControllers(xr, vrHeadSet);
+        initControllers(xr, vrHeadSet);
         VRControls.init(view, vrHeadSet);
 
 
@@ -52,12 +54,10 @@ const initializeWebXR = (view, options) => {
                 // This will also update the controllers position
                 vrHeadSet.updateMatrixWorld(true);
 
-                if (xrControllers.left) {
-                    listenGamepad(xrControllers.left);
+                for (const controller of xrControllers) {
+                    listenGamepad(controller);
                 }
-                if (xrControllers.right) {
-                    listenGamepad(xrControllers.right);
-                }
+
                 if (options.callback) {
                     options.callback();
                 }
@@ -119,35 +119,52 @@ const initializeWebXR = (view, options) => {
     }
 
     function initControllers(webXRManager, vrHeadSet) {
-        const controllerModelFactory = new XRControllerModelFactory();
-        const leftController = webXRManager.getController(0);
-        // leftController.addEventListener('connected', (event) => {
-        //     console.log(event.data.handedness);
-        // });
-        leftController.name = 'leftController';
-        const rightController = webXRManager.getController(1);
-        rightController.name = 'rightController';
-        bindControllerListeners(leftController, vrHeadSet);
-        bindControllerListeners(rightController, vrHeadSet);
-        const leftGripController = webXRManager.getControllerGrip(0);
-        leftGripController.name = 'leftGripController';
-        const rightGripController = webXRManager.getControllerGrip(1);
-        rightGripController.name = 'rightGripController';
-        bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
-        bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
         //  Add a light for the controllers
         vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
-        return { left: leftController, right: rightController };
+        const controllerModelFactory = new XRControllerModelFactory();
+
+        for (let i = 0; i < 2; i++) {
+            const controller = webXRManager.getController(i);
+
+
+            controller.addEventListener('connected', (event) => {
+                controller.name = event.data.handedness;    // Left or right
+                controller.userData.handedness = event.data.handedness;
+                // bindControllerListeners(controller, vrHeadSet);
+                controller.gamepad = event.data.gamepad;
+                vrHeadSet.add(controller);
+
+                const gripController = webXRManager.getControllerGrip(i);
+                gripController.name = `${controller.name}GripController`;
+                gripController.userData.handedness = event.data.handedness;
+                bindGripController(controllerModelFactory, gripController, vrHeadSet);
+                xrControllers.push(controller);
+                vrHeadSet.add(controller);
+            });
+
+            controller.addEventListener('disconnected', function removeCtrl() {
+                this.remove(this.children[0]);
+            });
+        }
+        // const leftController = webXRManager.getController(0);
+        //
+        // leftController.name = 'leftController';
+        // const rightController = webXRManager.getController(1);
+        // rightController.name = 'rightController';
+        // bindControllerListeners(leftController, vrHeadSet);
+        // bindControllerListeners(rightController, vrHeadSet);
+        // const leftGripController = webXRManager.getControllerGrip(0);
+        // leftGripController.name = 'leftGripController';
+        // const rightGripController = webXRManager.getControllerGrip(1);
+        // rightGripController.name = 'rightGripController';
+        // bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
+        // bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
+
+        // return { left: leftController, right: rightController };
     }
 
-    function bindControllerListeners(controller, vrHeadSet) {
-        controller.addEventListener('disconnected', function removeCtrl() {
-            this.remove(this.children[0]);
-        });
-        controller.addEventListener('connected', (event) => {
-            controller.gamepad = event.data.gamepad;
-        });
-        vrHeadSet.add(controller);
+    function bindControllerListeners(webXRManager, index, vrHeadSet) {
+
     }
 
     function bindGripController(controllerModelFactory, gripController, vrHeadSet) {
