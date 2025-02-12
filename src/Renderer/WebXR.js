@@ -66,13 +66,14 @@ const initializeWebXR = (view, options) => {
     });
 
 
-
     /*
     Listening {XRInputSource} and emit changes for convenience user binding
     Adding a few internal states for reactivity
     - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
     -
     */
+    //  TODO CLEAN THE CONTROLS HANDLER
+
     function listenGamepad(controller) {
         if (controller.gamepad) {
             // gamepad.axes = [0, 0, x, y];

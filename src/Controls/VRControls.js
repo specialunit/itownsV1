@@ -177,22 +177,22 @@ class VRControls {
      ======================= */
 
     // Right select ends.
-    onSelectRightEnd(ctrl) {
+    onSelectRightEnd(data) {
     // Uncomment and implement teleportation if needed:
     }
 
     // Right select starts.
-    onSelectRightStart(ctrl) {
+    onSelectRightStart(data) {
     // No operation needed yet.
     }
 
     // Left select starts.
-    onSelectLeftStart(ctrl) {
+    onSelectLeftStart(data) {
     // No operation needed yet.
     }
 
     // Left select ends.
-    onSelectLeftEnd(ctrl) {
+    onSelectLeftEnd(data) {
         // No operation needed yet.
     }
 
