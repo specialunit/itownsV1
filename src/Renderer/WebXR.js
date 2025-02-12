@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { XRControllerModelFactory } from  'ThreeExtended/webxr/XRControllerModelFactory';
 import { VRControls } from 'Main.js';
 
 
@@ -13,6 +12,8 @@ const initializeWebXR = (view, options) => {
     xr.enabled = true;
 
     xr.addEventListener('sessionstart', () => {
+        let vrControls;
+
         xr.getReferenceSpace('local');
 
         // To avoid controllers precision issues, headset should handle camera position
@@ -38,7 +39,9 @@ const initializeWebXR = (view, options) => {
 
         view.notifyChange();
 
-        const vrControls = new VRControls(view, vrHeadSet);
+        if (options.controllers) {
+            vrControls = new VRControls(view, vrHeadSet);
+        }
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
