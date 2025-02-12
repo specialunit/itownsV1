@@ -161,9 +161,9 @@ class View extends THREE.EventDispatcher {
      * @param {Object} [options.webXR] - enable webxr button to switch on VR visualization.
      * @param {number} [options.webXR.controllers=false] - enable vr controllers.
      // * @param {number} [options.webXR.scale=1.0] - apply webxr scale tranformation.
+     @param {number} [options.webXR.callback] - rendering callback.
      * @param {Scene} [options.scene3D] - [THREE.Scene](https://threejs.org/docs/#api/en/scenes/Scene) instance to use, otherwise a default one will be constructed
      * @param {Color} [options.diffuse] - [THREE.Color](https://threejs.org/docs/?q=color#api/en/math/Color) Diffuse color terrain material.
-     * @param {number} [options.webXR.callback] - rendering callback.
      * This color is applied to terrain if there isn't color layer on terrain extent (by example on pole).
      * @param {boolean} [options.enableFocusOnStart=true] - enable focus on dom element on start.
      */

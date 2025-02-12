@@ -4,8 +4,8 @@ import { VRControls } from 'Main.js';
 
 /**
  *
- * @param {*} view  dsfsdf
- * @param {*} options webXR, callback
+ * @param {*} view  current view
+ * @param {*} options controllers, callback
  */
 const initializeWebXR = (view, options) => {
     const xr = view.renderer.xr;

@@ -1024,7 +1024,6 @@ class GlobeControls extends THREE.EventDispatcher {
 
     /**
      * Returns the camera location projected on the ground in lat,lon. See {@linkcode Coordinates} for conversion.
-     * TODO : is never updated in XR scene, add a log or fix the in WebXR file;
      * @return {Coordinates} position
      */
 

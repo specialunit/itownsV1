@@ -277,6 +277,7 @@ class OGC3DTilesLayer extends GeometryLayer {
         this.pntsSizeMode = pntsSizeMode;
         this.pntsMinAttenuatedSize = pntsMinAttenuatedSize;
         this.pntsMaxAttenuatedSize = pntsMaxAttenuatedSize;
+
         this.tilesRenderer = new TilesRenderer(this.source.url);
         if (config.source.isOGC3DTilesIonSource) {
             this.tilesRenderer.registerPlugin(new CesiumIonAuthPlugin({
@@ -452,10 +453,6 @@ class OGC3DTilesLayer extends GeometryLayer {
     }
     preUpdate(context) {
         this.scale = context.camera._preSSE;
-        // if (context.view.renderer.xr.isPresenting) {
-        //     this.tilesRenderer.downloadQueue.schedulingCallback = this.tilesSchedulingCB;
-        //     this.tilesRenderer.parseQueue.schedulingCallback = this.tilesSchedulingCB;
-        // }
         this.handleTasks();
         this.tilesRenderer.update();
         return null; // don't return any element because 3d-tiles-renderer already updates them
