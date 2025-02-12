@@ -11,7 +11,6 @@ import { VRControls } from 'Main.js';
 const initializeWebXR = (view, options) => {
     const xr = view.renderer.xr;
     xr.enabled = true;
-    const xrControllers = [];
 
     xr.addEventListener('sessionstart', () => {
         xr.getReferenceSpace('local');
@@ -39,10 +38,7 @@ const initializeWebXR = (view, options) => {
 
         view.notifyChange();
 
-        // const xrControllers = initControllers(xr, vrHeadSet);
-        initControllers(xr, vrHeadSet);
-        VRControls.init(view, vrHeadSet);
-
+        const vrControls = new VRControls(view, vrHeadSet);
 
         // TODO Fix asynchronization between xr and MainLoop render loops.
         // (see MainLoop#scheduleViewUpdate).
@@ -54,8 +50,8 @@ const initializeWebXR = (view, options) => {
                 // This will also update the controllers position
                 vrHeadSet.updateMatrixWorld(true);
 
-                for (const controller of xrControllers) {
-                    listenGamepad(controller);
+                if (vrControls) {
+                    vrControls.listenGamepad();
                 }
 
                 if (options.callback) {
@@ -65,113 +61,6 @@ const initializeWebXR = (view, options) => {
             view.mainLoop.step(view, timestamp);
         });
     });
-
-
-    /*
-    Listening {XRInputSource} and emit changes for convenience user binding,
-    There is NO JOYSTICK Events so we need to ckeck it ourselves
-    Adding a few internal states for reactivity
-    - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
-    -
-    */
-
-    function listenGamepad(controller) {
-        if (!controller.gamepad) { return; }
-        // gamepad.axes = [0, 0, x, y];
-
-        const gamepad = controller.gamepad;
-        const activeValue = gamepad.axes.some(value => value !== 0);
-
-        // Handle stick activity state
-        if (controller.isStickActive && !activeValue && controller.gamepad.endGamePadtrackEmit) {
-            controller.dispatchEvent({ type: 'itowns-xr-axes-stop', message: { controller } });
-            controller.isStickActive = false;
-            return;
-        } else if (!controller.isStickActive && activeValue) {
-            controller.gamepad.endGamePadtrackEmit = false;
-            controller.isStickActive = true;
-        } else if (controller.isStickActive && !activeValue) {
-            controller.gamepad.endGamePadtrackEmit = true;
-        }
-
-        if (activeValue) {
-            controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
-        }
-
-        for (const [index, button] of gamepad.buttons.entries()) {
-            if (button.pressed) {
-                // 0 - trigger
-                // 1 - grip
-                // 3 - stick pressed
-                // 4 - bottom button
-                // 5 - upper button
-                controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
-                controller.lastButtonItem = button;
-            } else if (controller.lastButtonItem && controller.lastButtonItem === button) {
-                controller.dispatchEvent({ type: 'itowns-xr-button-released', message: { controller, buttonIndex: index, button } });
-                controller.lastButtonItem = undefined;
-            }
-
-            if (button.touched) {
-                // triggered really often
-            }
-        }
-    }
-
-    function initControllers(webXRManager, vrHeadSet) {
-        //  Add a light for the controllers
-        vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
-        const controllerModelFactory = new XRControllerModelFactory();
-
-        for (let i = 0; i < 2; i++) {
-            const controller = webXRManager.getController(i);
-
-
-            controller.addEventListener('connected', (event) => {
-                controller.name = event.data.handedness;    // Left or right
-                controller.userData.handedness = event.data.handedness;
-                // bindControllerListeners(controller, vrHeadSet);
-                controller.gamepad = event.data.gamepad;
-                vrHeadSet.add(controller);
-
-                const gripController = webXRManager.getControllerGrip(i);
-                gripController.name = `${controller.name}GripController`;
-                gripController.userData.handedness = event.data.handedness;
-                bindGripController(controllerModelFactory, gripController, vrHeadSet);
-                xrControllers.push(controller);
-                vrHeadSet.add(controller);
-            });
-
-            controller.addEventListener('disconnected', function removeCtrl() {
-                this.remove(this.children[0]);
-            });
-        }
-        // const leftController = webXRManager.getController(0);
-        //
-        // leftController.name = 'leftController';
-        // const rightController = webXRManager.getController(1);
-        // rightController.name = 'rightController';
-        // bindControllerListeners(leftController, vrHeadSet);
-        // bindControllerListeners(rightController, vrHeadSet);
-        // const leftGripController = webXRManager.getControllerGrip(0);
-        // leftGripController.name = 'leftGripController';
-        // const rightGripController = webXRManager.getControllerGrip(1);
-        // rightGripController.name = 'rightGripController';
-        // bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
-        // bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
-
-        // return { left: leftController, right: rightController };
-    }
-
-    function bindControllerListeners(webXRManager, index, vrHeadSet) {
-
-    }
-
-    function bindGripController(controllerModelFactory, gripController, vrHeadSet) {
-        gripController.add(controllerModelFactory.createControllerModel(gripController));
-        vrHeadSet.add(gripController);
-    }
-
 
     function updateCamera3D() {
         /* This is what's done in updateUserCamera the WebXRManager.js of threejs

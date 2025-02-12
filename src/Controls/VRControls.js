@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import Coordinates from 'Core/Geographic/Coordinates';
-import { DEMUtils } from 'Main.js';
+import { DEMUtils, XRControllerModelFactory } from 'Main.js';
 
 
 /**
@@ -18,42 +18,155 @@ class VRControls {
     // Store instance references.
         this.view = _view;
         this.groupXR = _groupXR;
-        this.renderer = _view.mainLoop.gfxEngine.renderer;
+        this.webXRManager = _view.mainLoop.gfxEngine.renderer.xr;
 
         this.rightButtonPressed = false;
-
+        this.controllers = [];
         // Initialize controllers
-        this.controller1 = this.bindListeners(0);
-        this.controller2 = this.bindListeners(1);
-
-        // Event listeners
-        this.setupEventListeners();
+        // this.controller1 = this.bindListeners(0);
+        // this.controller2 = this.bindListeners(1);
+        this.initControllers();
     }
 
     // Static factory method:
     static init(view, vrHeadSet) {
         return new VRControls(view, vrHeadSet);
     }
+
+
+    initControllers() {
+        //  Add a light for the controllers
+        this.groupXR.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
+        const controllerModelFactory = new XRControllerModelFactory();
+
+        for (let i = 0; i < 2; i++) {
+            const controller = this.webXRManager.getController(i);
+
+
+            controller.addEventListener('connected', (event) => {
+                controller.name = event.data.handedness;    // Left or right
+                controller.userData.handedness = event.data.handedness;
+                // bindControllerListeners(controller, vrHeadSet);
+                controller.gamepad = event.data.gamepad;
+                this.groupXR.add(controller);
+
+                const gripController = this.webXRManager.getControllerGrip(i);
+                gripController.name = `${controller.name}GripController`;
+                gripController.userData.handedness = event.data.handedness;
+                this.bindGripController(controllerModelFactory, gripController, this.groupXR);
+                this.controllers.push(controller);
+                this.groupXR.add(controller);
+
+
+                // Event listeners
+                this.setupEventListeners(controller);
+            });
+
+            controller.addEventListener('disconnected', function removeCtrl() {
+                this.remove(this.children[0]);
+            });
+        }
+    }
+
+    bindGripController(controllerModelFactory, gripController, vrHeadSet) {
+        gripController.add(controllerModelFactory.createControllerModel(gripController));
+        vrHeadSet.add(gripController);
+    }
+
+
+
+
     // Register event listeners for controllers.
-    setupEventListeners() {
-        this.controller1.addEventListener('itowns-xr-axes-changed', e => this.onLeftAxisChanged(e));
-        this.controller2.addEventListener('itowns-xr-axes-changed', e => this.onRightAxisChanged(e));
-        this.controller2.addEventListener('itowns-xr-axes-stop', e => this.onRightAxisStop(e));
-        this.controller1.addEventListener('itowns-xr-axes-stop', e => this.onLeftAxisStop(e));
-        this.controller2.addEventListener('itowns-xr-button-pressed', e => this.onRightButtonPressed(e));
-        this.controller1.addEventListener('itowns-xr-button-pressed', e => this.onLeftButtonPressed(e));
-        this.controller1.addEventListener('itowns-xr-button-released', e => this.onLeftButtonReleased(e));
-        this.controller2.addEventListener('itowns-xr-button-released', e => this.onRightButtonReleased(e));
-        this.controller1.addEventListener('selectstart', e => this.onSelectLeftStart(e));
-        this.controller1.addEventListener('selectend', e => this.onSelectLeftEnd(e));
-        this.controller2.addEventListener('selectstart', e => this.onSelectRightStart(e));
-        this.controller2.addEventListener('selectend', e => this.onSelectRightEnd(e));
+    setupEventListeners(controller) {
+        controller.addEventListener('itowns-xr-axes-changed', e => this.onAxisChanged(e));
+        controller.addEventListener('itowns-xr-axes-stop', e => this.onAxisStop(e));
+        controller.addEventListener('itowns-xr-button-pressed', e => this.onButtonPressed(e));
+        controller.addEventListener('itowns-xr-button-released', e => this.onButtonReleased(e));
+
+        controller.addEventListener('selectstart', e => this.onSelectStart(e));
+        controller.addEventListener('selectend', e => this.onSelectEnd(e));
     }
 
     // Helper method to bind a controller listener.
     bindListeners(index) {
-        return this.renderer.xr.getController(index);
+        return this.webXRManager.getController(index);
     }
+
+    /*
+Listening {XRInputSource} and emit changes for convenience user binding,
+There is NO JOYSTICK Events so we need to ckeck it ourselves
+Adding a few internal states for reactivity
+- controller.isStickActive      {boolean} true when a controller stick is not on initial state.
+-
+*/
+
+    listenGamepad() {
+        for (const controller of this.controllers) {
+            if (!controller.gamepad) {
+                return;
+            }
+            // gamepad.axes = [0, 0, x, y];
+
+            const gamepad = controller.gamepad;
+            const activeValue = gamepad.axes.some(value => value !== 0);
+
+            // Handle stick activity state
+            if (controller.isStickActive && !activeValue && controller.gamepad.endGamePadtrackEmit) {
+                controller.dispatchEvent({
+                    type: 'itowns-xr-axes-stop',
+                    message: { controller },
+                });
+                controller.isStickActive = false;
+                return;
+            } else if (!controller.isStickActive && activeValue) {
+                controller.gamepad.endGamePadtrackEmit = false;
+                controller.isStickActive = true;
+            } else if (controller.isStickActive && !activeValue) {
+                controller.gamepad.endGamePadtrackEmit = true;
+            }
+
+            if (activeValue) {
+                controller.dispatchEvent({
+                    type: 'itowns-xr-axes-changed',
+                    message: { controller },
+                });
+            }
+
+            for (const [index, button] of gamepad.buttons.entries()) {
+                if (button.pressed) {
+                    // 0 - trigger
+                    // 1 - grip
+                    // 3 - stick pressed
+                    // 4 - bottom button
+                    // 5 - upper button
+                    controller.dispatchEvent({
+                        type: 'itowns-xr-button-pressed',
+                        message: {
+                            controller,
+                            buttonIndex: index,
+                            button,
+                        },
+                    });
+                    controller.lastButtonItem = button;
+                } else if (controller.lastButtonItem && controller.lastButtonItem === button) {
+                    controller.dispatchEvent({
+                        type: 'itowns-xr-button-released',
+                        message: {
+                            controller,
+                            buttonIndex: index,
+                            button,
+                        },
+                    });
+                    controller.lastButtonItem = undefined;
+                }
+
+                if (button.touched) {
+                    // triggered really often
+                }
+            }
+        }
+    }
+
 
     // Clamp a translation to ground and then apply the transformation.
     clampAndApplyTransformationToXR(trans, offsetRotation) {
@@ -195,23 +308,42 @@ class VRControls {
     onSelectLeftEnd(data) {
         // No operation needed yet.
     }
+    onSelectStart(data) {
+        const ctrl = data.target;
+
+        if (ctrl.userData.handedness === 'left') {
+            this.onSelectLeftStart(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onSelectRightStart(ctrl);
+        }
+    }
+    onSelectEnd(data) {
+        const ctrl = data.target;
+
+        if (ctrl.userData.handedness === 'left') {
+            this.onSelectRightEnd(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onSelectLeftEnd(ctrl);
+        }
+    }
+    onButtonPressed(data) {
+        const ctrl = data.target;
+        if (ctrl.userData.handedness === 'left') {
+            this.onLeftButtonPressed(data);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onRightButtonPressed(data);
+        }
+    }
 
     // Right button pressed.
     onRightButtonPressed(data) {
-        const ctrl = data.message.controller;
+        const ctrl = data.target;
         if (data.message.buttonIndex === 1) {
             // Activate vertical adjustment.
             if (ctrl.gamepad.axes[3] === 0) {
                 return;
             }
             this.rightButtonPressed = true;
-
-
-            // const offsetRotation = this.getRotationYaw();
-            // const speedFactor = this.getSpeedFactor();
-            // const deltaTransl = this.getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
-            // const trans = this.groupXR.position.clone().add(deltaTransl);
-            // this.clampAndApplyTransformationToXR(trans, offsetRotation);
         }
     }
 
@@ -221,9 +353,7 @@ class VRControls {
     }
 
     // Right axis changed.
-    onRightAxisChanged(data) {
-        const ctrl = data.message.controller;
-
+    onRightAxisChanged(ctrl) {
         if (ctrl.userData.handedness !== 'right') {
             return;
         }
@@ -239,10 +369,18 @@ class VRControls {
         }
     }
 
-    // Left axis changed.
-    onLeftAxisChanged(data) {
-        const ctrl = data.message.controller;
+    // Axis changed.
+    onAxisChanged(data) {
+        const ctrl = data.target;
 
+        if (ctrl.userData.handedness === 'left') {
+            this.onLeftAxisChanged(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onRightAxisChanged(ctrl);
+        }
+    }
+    // Left axis changed.
+    onLeftAxisChanged(ctrl) {
         if (ctrl.userData.handedness !== 'left') {
             return;
         }
@@ -250,6 +388,17 @@ class VRControls {
 
         const quat = this.getRotationYaw(ctrl.gamepad.axes[2]);
         this.applyTransformationToXR(trans, quat);
+    }
+
+    // Right axis stops.
+    onAxisStop(data) {
+        const ctrl = data.target;
+
+        if (ctrl.userData.handedness === 'left') {
+            this.onLeftAxisStop(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onRightAxisStop(ctrl);
+        }
     }
 
     // Right axis stops.
@@ -262,6 +411,16 @@ class VRControls {
         // No operation defined.
     }
 
+    // Button released.
+    onButtonReleased(data) {
+        const ctrl = data.target;
+
+        if (ctrl.userData.handedness === 'left') {
+            this.onLeftButtonReleased(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onRightButtonReleased(ctrl);
+        }
+    }
     // Right button released.
     onRightButtonReleased(data) {
     // No operation defined.
