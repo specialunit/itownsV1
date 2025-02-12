@@ -13,7 +13,6 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script>
 
 
-
     </head>
     <body>
         <div id="viewerDiv"></div>
@@ -42,7 +41,7 @@
             // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
             const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4413284.5, -18949.275390625, 4589538.5); // 4412106.042879028, -26370.61912189091, 4590341.467693916);
             const mountainsCoordinates = new itowns.Coordinates('EPSG:4326', 6.227, 45.167);
-            const seteCoordinates = new itowns.Coordinates('EPSG:4326',3.6968333,43.3975833 );
+            const seteCoordinates = new itowns.Coordinates('EPSG:4326', 3.6968333, 43.3975833);
 
             // ---------- SETUP THE VR VIEW : ----------
 
@@ -53,21 +52,19 @@
                 tilt: 5,
                 heading: 10,
                 /**
-                range: 15000,
-                tilt: 5,
-                heading: 62,
-                */
+                 range: 15000,
+                 tilt: 5,
+                 heading: 62,
+                 */
             };
-
 
 
             // `viewerDiv` will contain iTowns' rendering area (`<canvas>`)
             const viewerDiv = document.getElementById('viewerDiv');
 
 
-
             // Create a GlobeView
-            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: {controllers :true} });
+            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { controllers: true } });
 
 
             // Setup loading screen and debug menu
@@ -79,21 +76,23 @@
             // Add one imagery layer to the scene. This layer's properties are
             // defined in a json file, but it could be defined as a plain js
             // // object. See `Layer` documentation for more info.
-            itowns.Fetcher.json('./layers/JSONLayers/Ortho.json').then((config) => {
-                config.source = new itowns.WMTSSource(config.source);
-                view.addLayer(
-                    new itowns.ColorLayer('Ortho', config),
-                ).then(menuGlobe.addLayerGUI.bind(menuGlobe));
-            });
+            itowns.Fetcher.json('./layers/JSONLayers/Ortho.json')
+                .then((config) => {
+                    config.source = new itowns.WMTSSource(config.source);
+                    view.addLayer(
+                        new itowns.ColorLayer('Ortho', config),
+                    )
+                        .then(menuGlobe.addLayerGUI.bind(menuGlobe));
+                });
             //
             //
 
             // Create a new Layer 3d-tiles For Pointcloud
 
-            const source = new itowns.OGC3DTilesSource({ url: "https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/pnts-sete-2021-0756_6256/tileset.json" });
+            const source = new itowns.OGC3DTilesSource({ url: 'https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/pnts-sete-2021-0756_6256/tileset.json' });
             const pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
                 source,
-                pntsSizeMode:1
+                pntsSizeMode: 1
 
             },);
 
@@ -104,32 +103,29 @@
             // add building layer
 
             var buildingsSource = new itowns.VectorTilesSource({
-            style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
-            // Filter to get only buildings
-            filter: (layer) => {
-                return layer['source-layer'].includes('bati_surf')
-                    && layer.paint["fill-color"];
-            },
-        });
-
-        var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
-            source: buildingsSource,
-            zoom: {min: 15},
-            // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
-            // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
-            accurate: false,
-            style: new itowns.Style({
-                fill: {
-                    base_altitude: (p) => p.alti_sol || 0,
-                    extrusion_height: (p) => p.hauteur || 0
+                style: 'https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json',
+                // Filter to get only buildings
+                filter: (layer) => {
+                    return layer['source-layer'].includes('bati_surf')
+                        && layer.paint['fill-color'];
                 },
-            })
-        });
+            });
 
-        view.addLayer(buildingsLayer);
+            var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
+                source: buildingsSource,
+                zoom: { min: 15 },
+                // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
+                // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
+                accurate: false,
+                style: new itowns.Style({
+                    fill: {
+                        base_altitude: (p) => p.alti_sol || 0,
+                        extrusion_height: (p) => p.hauteur || 0
+                    },
+                })
+            });
 
-
-
+            view.addLayer(buildingsLayer);
 
 
             // Listen for globe full initialisation event
@@ -138,12 +134,10 @@
             });
 
 
-
             // Add the UI Debug
             var d = new debug.Debug(view, menuGlobe.gui);
             debug.createTileDebugUI(menuGlobe.gui, view, view.tileLayer, d);
             debug.create3dTilesDebugUI(menuGlobe.gui, view, pointLayer, d);
-
 
 
             // ---------- DISPLAY A DIGITAL ELEVATION MODEL : ----------
@@ -153,11 +147,15 @@
             function addElevationLayerFromConfig(config) {
                 config.source = new itowns.WMTSSource(config.source);
                 var elevationLayer = new itowns.ElevationLayer(config.id, config);
-                view.addLayer(elevationLayer).then(menuGlobe.addLayerGUI.bind(menuGlobe));
+                view.addLayer(elevationLayer)
+                    .then(menuGlobe.addLayerGUI.bind(menuGlobe));
             }
-            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json').then(addElevationLayerFromConfig);
+
+            itowns.Fetcher.json('./layers/JSONLayers/IGN_MNT_HIGHRES.json')
+                .then(addElevationLayerFromConfig);
             // must keep it, Failed to execute 'updateRenderState' on 'XRSession': Failed to read the 'depthFar' property from 'XRRenderStateInit': The provided double value is non-finite.
-            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json').then(addElevationLayerFromConfig);
+            itowns.Fetcher.json('./layers/JSONLayers/WORLD_DTM.json')
+                .then(addElevationLayerFromConfig);
 
 
             initXR();

@@ -237,7 +237,7 @@ Adding a few internal states for reactivity
         if (axisValue) {
             deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed.
         }
-        // Get the "up" direction from the camera coordinate.
+        // Get the "up" direction from the camera coordinate. // TODO should we handle other than globe ?
         const cameraCoordinate = this.view.controls.getCameraCoordinate();
         const upAxis = cameraCoordinate.geodesicNormal.clone().normalize();
         // Create a quaternion representing a yaw rotation about the up axis.
