@@ -10,6 +10,8 @@ import { VRControls } from 'Main.js';
  */
 const initializeWebXR = (view, options) => {
     const xr = view.renderer.xr;
+    xr.enabled = true;
+
     xr.addEventListener('sessionstart', () => {
         xr.getReferenceSpace('local');
 
@@ -44,7 +46,12 @@ const initializeWebXR = (view, options) => {
         // (see MainLoop#scheduleViewUpdate).
         xr.setAnimationLoop((timestamp) => {
             if (xr.isPresenting && xr.getCamera().cameras.length > 0) {
+                // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
                 updateCamera3D();
+
+                // This will also update the controllers position
+                vrHeadSet.updateMatrixWorld(true);
+
                 if (xrControllers.left) {
                     listenGamepad(xrControllers.left);
                 }
@@ -54,12 +61,6 @@ const initializeWebXR = (view, options) => {
                 if (options.callback) {
                     options.callback();
                 }
-
-                // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
-                // + without it,controllers don't update
-                if (!view.scene.matrixWorldAutoUpdate) {
-                    view.scene.updateMatrixWorld();
-                }
             }
             view.mainLoop.step(view, timestamp);
         });
@@ -67,50 +68,52 @@ const initializeWebXR = (view, options) => {
 
 
     /*
-    Listening {XRInputSource} and emit changes for convenience user binding
+    Listening {XRInputSource} and emit changes for convenience user binding,
+    There is NO JOYSTICK Events so we need to ckeck it ourselves
     Adding a few internal states for reactivity
     - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
     -
     */
-    //  TODO CLEAN THE CONTROLS HANDLER
 
     function listenGamepad(controller) {
-        if (controller.gamepad) {
-            // gamepad.axes = [0, 0, x, y];
-            const gamepad = controller.gamepad;
-            const activeValue = gamepad.axes.find(value => value !== 0);
-            if (controller.isStickActive && !activeValue && controller.gamepad.endGamePadtrackEmit) {
-                controller.dispatchEvent({ type: 'itowns-xr-axes-stop', message: { controller } });
-                controller.isStickActive = false;
-                return;
-            } else if (!controller.isStickActive && activeValue) {
-                controller.gamepad.endGamePadtrackEmit = false;
-                controller.isStickActive = true;
-            } else if (controller.isStickActive && !activeValue) {
-                controller.gamepad.endGamePadtrackEmit = true;
+        if (!controller.gamepad) { return; }
+        // gamepad.axes = [0, 0, x, y];
+
+        const gamepad = controller.gamepad;
+        const activeValue = gamepad.axes.some(value => value !== 0);
+
+        // Handle stick activity state
+        if (controller.isStickActive && !activeValue && controller.gamepad.endGamePadtrackEmit) {
+            controller.dispatchEvent({ type: 'itowns-xr-axes-stop', message: { controller } });
+            controller.isStickActive = false;
+            return;
+        } else if (!controller.isStickActive && activeValue) {
+            controller.gamepad.endGamePadtrackEmit = false;
+            controller.isStickActive = true;
+        } else if (controller.isStickActive && !activeValue) {
+            controller.gamepad.endGamePadtrackEmit = true;
+        }
+
+        if (activeValue) {
+            controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
+        }
+
+        for (const [index, button] of gamepad.buttons.entries()) {
+            if (button.pressed) {
+                // 0 - trigger
+                // 1 - grip
+                // 3 - stick pressed
+                // 4 - bottom button
+                // 5 - upper button
+                controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
+                controller.lastButtonItem = button;
+            } else if (controller.lastButtonItem && controller.lastButtonItem === button) {
+                controller.dispatchEvent({ type: 'itowns-xr-button-released', message: { controller, buttonIndex: index, button } });
+                controller.lastButtonItem = undefined;
             }
 
-            if (activeValue) {
-                controller.dispatchEvent({ type: 'itowns-xr-axes-changed', message: { controller } });
-            }
-
-            for (const [index, button] of gamepad.buttons.entries()) {
-                if (button.pressed) {
-                    // 0 - trigger
-                    // 1 - grip
-                    // 3 - stick pressed
-                    // 4 - bottom button
-                    // 5 - upper button
-                    controller.dispatchEvent({ type: 'itowns-xr-button-pressed', message: { controller, buttonIndex: index, button } });
-                    controller.lastButtonItem = button;
-                } else if (controller.lastButtonItem && controller.lastButtonItem === button) {
-                    controller.dispatchEvent({ type: 'itowns-xr-button-released', message: { controller, buttonIndex: index, button } });
-                    controller.lastButtonItem = undefined;
-                }
-
-                if (button.touched) {
-                    // triggered really often
-                }
+            if (button.touched) {
+                // triggered really often
             }
         }
     }
@@ -118,6 +121,9 @@ const initializeWebXR = (view, options) => {
     function initControllers(webXRManager, vrHeadSet) {
         const controllerModelFactory = new XRControllerModelFactory();
         const leftController = webXRManager.getController(0);
+        // leftController.addEventListener('connected', (event) => {
+        //     console.log(event.data.handedness);
+        // });
         leftController.name = 'leftController';
         const rightController = webXRManager.getController(1);
         rightController.name = 'rightController';
@@ -129,6 +135,8 @@ const initializeWebXR = (view, options) => {
         rightGripController.name = 'rightGripController';
         bindGripController(controllerModelFactory, leftGripController, vrHeadSet);
         bindGripController(controllerModelFactory, rightGripController, vrHeadSet);
+        //  Add a light for the controllers
+        vrHeadSet.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
         return { left: leftController, right: rightController };
     }
 
@@ -154,9 +162,8 @@ const initializeWebXR = (view, options) => {
                camera.projectionMatrix.copy( cameraXR.projectionMatrix );
               camera.projectionMatrixInverse.copy( cameraXR.projectionMatrixInverse );
                But it safer to also change all the attributes, in case of another call to updateProjectionMatrix
-               */
+       */
 
-        // TODO should be called only once, but the first values are wrong because the camL&camR weren't updated
         const { near, far, aspect, fov } = extractCameraAttributesFromProjectionMatrix(view._camXR.projectionMatrix);
         view.camera3D.near = near;
         view.camera3D.far = far;
