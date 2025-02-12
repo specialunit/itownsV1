@@ -21,6 +21,7 @@
         <script type="importmap">
             {
                 "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
                     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
                 }
             }
@@ -37,18 +38,21 @@
 
         <script type="module">
             import { VRButton } from 'three/addons/webxr/VRButton.js';
+            import {zoomToLayer} from './jsm/OGC3DTilesHelper.js';
+
             // ---------- CREATE A GlobeView FOR SUPPORTING DATA VISUALIZATION : ----------
             const tile3DCoordinates = new itowns.Coordinates('EPSG:4978', 4413284.5, -18949.275390625, 4589538.5); // 4412106.042879028, -26370.61912189091, 4590341.467693916);
             const mountainsCoordinates = new itowns.Coordinates('EPSG:4326', 6.227, 45.167);
+            const seteCoordinates = new itowns.Coordinates('EPSG:4326',3.6968333,43.3975833 );
 
             // ---------- SETUP THE VR VIEW : ----------
 
             // Define camera initial position
             const placement = {
-                coord: tile3DCoordinates,
-                range: 1000,
+                coord: seteCoordinates,
+                range: 300,
                 tilt: 5,
-                heading: 110,
+                heading: 10,
                 /**
                 range: 15000,
                 tilt: 5,
@@ -87,7 +91,7 @@
 
             // Create a new Layer 3d-tiles For Pointcloud
 
-            const source = new itowns.OGC3DTilesSource({ url: "https://10.1.23.22/3dtiles/demo_point_cloud/tileset.json" });
+            const source = new itowns.OGC3DTilesSource({ url: "https://raw.githubusercontent.com/iTowns/iTowns2-sample-data/master/pointclouds/pnts-sete-2021-0756_6256/tileset.json" });
             const pointLayer = new itowns.OGC3DTilesLayer('3DTiles', {
                 source,
                 pntsSizeMode:1
@@ -100,30 +104,30 @@
 
             // add building layer
 
-        //     var buildingsSource = new itowns.VectorTilesSource({
-        //     style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
-        //     // Filter to get only buildings
-        //     filter: (layer) => {
-        //         return layer['source-layer'].includes('bati_surf')
-        //             && layer.paint["fill-color"];
-        //     },
-        // });
-        //
-        // var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
-        //     source: buildingsSource,
-        //     zoom: {min: 15},
-        //     // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
-        //     // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
-        //     accurate: false,
-        //     style: new itowns.Style({
-        //         fill: {
-        //             base_altitude: (p) => p.alti_sol || 0,
-        //             extrusion_height: (p) => p.hauteur || 0
-        //         },
-        //     })
-        // });
-        //
-        // view.addLayer(buildingsLayer);
+            var buildingsSource = new itowns.VectorTilesSource({
+            style: "https://data.geopf.fr/annexes/ressources/vectorTiles/styles/PLAN.IGN/standard.json",
+            // Filter to get only buildings
+            filter: (layer) => {
+                return layer['source-layer'].includes('bati_surf')
+                    && layer.paint["fill-color"];
+            },
+        });
+
+        var buildingsLayer = new itowns.FeatureGeometryLayer('building-layer-ign', {
+            source: buildingsSource,
+            zoom: {min: 15},
+            // increases reprojection from 3857 to 4326 reprojection speed with little inaccuracy introduced.
+            // More details on http://www.itowns-project.org/itowns/docs/#api/Layer/FeatureGeometryLayer
+            accurate: false,
+            style: new itowns.Style({
+                fill: {
+                    base_altitude: (p) => p.alti_sol || 0,
+                    extrusion_height: (p) => p.hauteur || 0
+                },
+            })
+        });
+
+        view.addLayer(buildingsLayer);
 
 
 

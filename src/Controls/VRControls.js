@@ -22,9 +22,6 @@ class VRControls {
 
         this.rightButtonPressed = false;
         this.controllers = [];
-        // Initialize controllers
-        // this.controller1 = this.bindListeners(0);
-        // this.controller2 = this.bindListeners(1);
         this.initControllers();
     }
 
@@ -37,6 +34,7 @@ class VRControls {
     initControllers() {
         //  Add a light for the controllers
         this.groupXR.add(new THREE.HemisphereLight(0xa5a5a5, 0x898989, 3));
+
         const controllerModelFactory = new XRControllerModelFactory();
 
         for (let i = 0; i < 2; i++) {
@@ -94,10 +92,9 @@ class VRControls {
 
     /*
 Listening {XRInputSource} and emit changes for convenience user binding,
-There is NO JOYSTICK Events so we need to ckeck it ourselves
+There is NO JOYSTICK Events so we need to check it ourselves
 Adding a few internal states for reactivity
 - controller.isStickActive      {boolean} true when a controller stick is not on initial state.
--
 */
 
     listenGamepad() {
