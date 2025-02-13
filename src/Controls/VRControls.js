@@ -238,9 +238,7 @@ Adding a few internal states for reactivity
             deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed.
         }
         // Get the "up" direction from the camera coordinate. // TODO should we handle other than globe ?
-        // const cameraCoordinate = this.view.controls.getCameraCoordinate();
-        // const upAxis = cameraCoordinate.geodesicNormal.clone().normalize();
-        const upAxis = this.view.camera3D.position.clone().normalize();
+        const upAxis = this.groupXR.position.clone().normalize();
         // Create a quaternion representing a yaw rotation about the up axis.
         const yawQuaternion = new THREE.Quaternion()
             .setFromAxisAngle(upAxis, deltaRotation)
@@ -249,26 +247,30 @@ Adding a few internal states for reactivity
         baseOrientation.premultiply(yawQuaternion);
         return baseOrientation;
     }
-    // Calculate a roll rotation quaternion based on an axis value from the joystick.
-    getRotationRoll(axisValue) {
-        // Clone the current XR group's orientation.
+
+    // Calculate a pitch rotation quaternion based on an axis value from the joystick.
+    getRotationPitch(axisValue) {
+    // Clone the current XR group's orientation.
         const baseOrientation = this.groupXR.quaternion.clone().normalize();
         let deltaRotation = 0;
+
         if (axisValue) {
             deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed.
         }
-        // Get the "up" direction from the camera coordinate.
-        const upAxis = this.view.camera3D.position.clone().normalize();
-        const worldUp = new THREE.Vector3(-1, 0, 0);
 
-        // Compute the roll axis (sideways direction)
-        const rollAxis = new THREE.Vector3().crossVectors(worldUp, upAxis).normalize();
-        // Create a quaternion representing a roll rotation.
-        const rollQuaternion = new THREE.Quaternion()
-            .setFromAxisAngle(rollAxis, deltaRotation)
+        // Compute the right axis from the current orientation.
+        // (Assuming (1, 0, 0) is the right direction in local space.)
+        const rightAxis = new THREE.Vector3(1, 0, 0)
+            .applyQuaternion(baseOrientation)
             .normalize();
-        // Apply the roll rotation.
-        baseOrientation.premultiply(rollQuaternion);
+
+        // Create a quaternion representing a pitch rotation about the right axis.
+        const pitchQuaternion = new THREE.Quaternion()
+            .setFromAxisAngle(rightAxis, deltaRotation)
+            .normalize();
+
+        // Apply the pitch rotation.
+        baseOrientation.premultiply(pitchQuaternion);
         return baseOrientation;
     }
 
@@ -415,7 +417,7 @@ Adding a few internal states for reactivity
         if (Math.abs(ctrl.gamepad.axes[2]) > Math.abs(ctrl.gamepad.axes[3])) {
             offsetRotation = this.getRotationYaw(ctrl.gamepad.axes[2]);
         } else {
-            offsetRotation = this.getRotationRoll(ctrl.gamepad.axes[3]);
+            offsetRotation = this.getRotationPitch(ctrl.gamepad.axes[3]);
         }
 
         this.applyTransformationToXR(trans, offsetRotation);
