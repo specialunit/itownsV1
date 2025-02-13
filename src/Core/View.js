@@ -158,7 +158,7 @@ class View extends THREE.EventDispatcher {
      * a default one will be constructed. In this case, if options.renderer is an object, it will be used to
      * configure the renderer (see {@link c3DEngine}.  If not present, a new &lt;canvas> will be created and
      * added to viewerDiv (mutually exclusive with mainLoop)
-     * //TODO definie webxr only in globelayer ?
+     * //TODO define webxr only in globelayer ?
      * @param {Object} [options.webXR] - enable webxr button to switch on VR visualization.
      * @param {number} [options.webXR.controllers=false] - enable vr controllers.
      // * @param {number} [options.webXR.scale=1.0] - apply webxr scale tranformation.
