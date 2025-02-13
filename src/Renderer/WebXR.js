@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { VRControls } from 'Main.js';
 
+// TODO handle xr session end
 
 /**
  *
