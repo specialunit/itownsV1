@@ -86,10 +86,6 @@ class VRControls {
         controller.addEventListener('selectend', e => this.onSelectEnd(e));
     }
 
-    // Helper method to bind a controller listener.
-    bindListeners(index) {
-        return this.webXRManager.getController(index);
-    }
 
     /*
 Listening {XRInputSource} and emit changes for convenience user binding,
@@ -176,7 +172,9 @@ Adding a few internal states for reactivity
     applyTransformationToXR(trans, offsetRotation) {
         if (!offsetRotation) {
             console.error('missing rotation quaternion');
-            offsetRotation = this.groupXR.quaternion;
+            return;
+
+            // offsetRotation = this.groupXR.quaternion;
         }
 
         if (!trans) {
@@ -226,8 +224,7 @@ Adding a few internal states for reactivity
 
     // Calculate a speed factor based on the camera's altitude.
     getSpeedFactor() {
-        const altitude = this.view.controls.getCameraCoordinate ? this.view.controls.getCameraCoordinate().altitude : 0;
-
+        const altitude = this.view.controls.getCameraCoordinate ? this.view.controls.getCameraCoordinate().altitude : 1;
         return Math.min(Math.max(altitude / 50, 2), 2000); // TODO: Adjust if needed -> add as a config ?
     }
 
@@ -283,7 +280,7 @@ Adding a few internal states for reactivity
                 .applyQuaternion(this.view.camera3D.quaternion.clone().normalize())
                 .multiplyScalar(speed);
         }
-        const offsetRotation = this.getRotationYaw();
+        const offsetRotation = this.groupXR.quaternion.clone();
         const trans = this.groupXR.position.clone().add(directionX.add(directionZ));
         // this.applyTransformationToXR(trans, offsetRotation);
         this.clampAndApplyTransformationToXR(trans, offsetRotation);
@@ -363,7 +360,7 @@ Adding a few internal states for reactivity
         }
         //  Check if GRIP is pressed
         if (this.rightButtonPressed) {
-            const offsetRotation = this.getRotationYaw();
+            const offsetRotation = this.groupXR.quaternion.clone();
             const speedFactor = this.getSpeedFactor();
             const deltaTransl = this.getTranslationElevation(ctrl.gamepad.axes[3], speedFactor);
             const trans = this.groupXR.position.clone().add(deltaTransl);
