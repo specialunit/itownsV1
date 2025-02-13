@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import Coordinates from 'Core/Geographic/Coordinates';
 import { DEMUtils, XRControllerModelFactory } from 'Main.js';
+import { Vector3 } from 'three';
 
 
 /**
@@ -222,10 +223,9 @@ Adding a few internal states for reactivity
 
     // Calculate a speed factor based on the camera's altitude.
     getSpeedFactor() {
-        const altitude = this.view.controls.getCameraCoordinate().altitude;
+        const altitude = this.view.controls.getCameraCoordinate ? this.view.controls.getCameraCoordinate().altitude : 0;
 
-        const speedFactor = Math.min(Math.max(altitude / 50, 2), 2000);
-        return speedFactor * 10; // TODO: Adjust or remove the *10 multiplier if needed.
+        return Math.min(Math.max(altitude / 50, 2), 2000); // TODO: Adjust if needed -> add as a config ?
     }
 
     // Calculate a yaw rotation quaternion based on an axis value.
@@ -238,8 +238,9 @@ Adding a few internal states for reactivity
             deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed.
         }
         // Get the "up" direction from the camera coordinate. // TODO should we handle other than globe ?
-        const cameraCoordinate = this.view.controls.getCameraCoordinate();
-        const upAxis = cameraCoordinate.geodesicNormal.clone().normalize();
+        // const cameraCoordinate = this.view.controls.getCameraCoordinate();
+        // const upAxis = cameraCoordinate.geodesicNormal.clone().normalize();
+        const upAxis = this.view.camera3D.position.clone().normalize();
         // Create a quaternion representing a yaw rotation about the up axis.
         const yawQuaternion = new THREE.Quaternion()
             .setFromAxisAngle(upAxis, deltaRotation)
@@ -252,7 +253,9 @@ Adding a few internal states for reactivity
     // Compute a translation vector for vertical adjustment.
     getTranslationElevation(axisValue, speedFactor) {
         const speed = axisValue * speedFactor;
-        const direction = this.view.controls.getCameraCoordinate().geodesicNormal.clone();
+        // const direction = this.view.controls.getCameraCoordinate().geodesicNormal.clone();
+        const direction = this.view.camera3D.position.clone().normalize();
+
         direction.multiplyScalar(-speed);
         return direction;
     }
@@ -279,6 +282,7 @@ Adding a few internal states for reactivity
         }
         const offsetRotation = this.getRotationYaw();
         const trans = this.groupXR.position.clone().add(directionX.add(directionZ));
+        // this.applyTransformationToXR(trans, offsetRotation);
         this.clampAndApplyTransformationToXR(trans, offsetRotation);
     }
 
