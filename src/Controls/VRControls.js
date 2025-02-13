@@ -213,12 +213,15 @@ Adding a few internal states for reactivity
             return trans;
         }
 
-        const coordsProjected = transCoordinate.as(this.view.controls.getCameraCoordinate().crs);
-        if (coordsProjected.altitude - terrainElevation - VRControls.MIN_DELTA_ALTITUDE <= 0) {
-            coordsProjected.altitude = terrainElevation + VRControls.MIN_DELTA_ALTITUDE;
+        if (this.view.controls.getCameraCoordinate) {
+            const coordsProjected = transCoordinate.as(this.view.controls.getCameraCoordinate().crs);
+            if (coordsProjected.altitude - terrainElevation - VRControls.MIN_DELTA_ALTITUDE <= 0) {
+                coordsProjected.altitude = terrainElevation + VRControls.MIN_DELTA_ALTITUDE;
+            }
+            return coordsProjected.as(this.view.referenceCrs).toVector3();
+        } else {
+            return trans;
         }
-
-        return coordsProjected.as(this.view.referenceCrs).toVector3();
     }
 
     // Calculate a speed factor based on the camera's altitude.
