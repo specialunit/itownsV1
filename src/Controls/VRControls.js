@@ -228,7 +228,7 @@ Adding a few internal states for reactivity
         return Math.min(Math.max(altitude / 50, 2), 2000); // TODO: Adjust if needed -> add as a config ?
     }
 
-    // Calculate a yaw rotation quaternion based on an axis value.
+    // Calculate a yaw rotation quaternion based on an axis value from the joystick.
     getRotationYaw(axisValue) {
         // Clone the current XR group's orientation.
         const baseOrientation = this.groupXR.quaternion.clone().normalize();
@@ -249,6 +249,28 @@ Adding a few internal states for reactivity
         baseOrientation.premultiply(yawQuaternion);
         return baseOrientation;
     }
+    // Calculate a roll rotation quaternion based on an axis value from the joystick.
+    getRotationRoll(axisValue) {
+        // Clone the current XR group's orientation.
+        const baseOrientation = this.groupXR.quaternion.clone().normalize();
+        let deltaRotation = 0;
+        if (axisValue) {
+            deltaRotation = -Math.PI * axisValue / 140; // Adjust sensitivity as needed.
+        }
+        // Get the "up" direction from the camera coordinate.
+        const upAxis = this.view.camera3D.position.clone().normalize();
+        const worldUp = new THREE.Vector3(-1, 0, 0);
+
+        // Compute the roll axis (sideways direction)
+        const rollAxis = new THREE.Vector3().crossVectors(worldUp, upAxis).normalize();
+        // Create a quaternion representing a roll rotation.
+        const rollQuaternion = new THREE.Quaternion()
+            .setFromAxisAngle(rollAxis, deltaRotation)
+            .normalize();
+        // Apply the roll rotation.
+        baseOrientation.premultiply(rollQuaternion);
+        return baseOrientation;
+    }
 
     // Compute a translation vector for vertical adjustment.
     getTranslationElevation(axisValue, speedFactor) {
@@ -262,9 +284,6 @@ Adding a few internal states for reactivity
 
     // Handles camera flying based on controller input.
     cameraOnFly(ctrl) {
-        if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
-            return;
-        }
         let directionX = new THREE.Vector3();
         let directionZ = new THREE.Vector3();
         const speedFactor = this.getSpeedFactor();
@@ -353,6 +372,19 @@ Adding a few internal states for reactivity
     // No operation defined.
     }
 
+    // Axis changed.
+    onAxisChanged(data) {
+        const ctrl = data.target;
+        if (ctrl.gamepad.axes[2] === 0 && ctrl.gamepad.axes[3] === 0) {
+            return;
+        }
+        if (ctrl.userData.handedness === 'left') {
+            this.onLeftAxisChanged(ctrl);
+        } else if (ctrl.userData.handedness === 'right') {
+            this.onRightAxisChanged(ctrl);
+        }
+    }
+
     // Right axis changed.
     onRightAxisChanged(ctrl) {
         if (ctrl.userData.handedness !== 'right') {
@@ -370,25 +402,23 @@ Adding a few internal states for reactivity
         }
     }
 
-    // Axis changed.
-    onAxisChanged(data) {
-        const ctrl = data.target;
-
-        if (ctrl.userData.handedness === 'left') {
-            this.onLeftAxisChanged(ctrl);
-        } else if (ctrl.userData.handedness === 'right') {
-            this.onRightAxisChanged(ctrl);
-        }
-    }
     // Left axis changed.
     onLeftAxisChanged(ctrl) {
         if (ctrl.userData.handedness !== 'left') {
             return;
         }
-        const trans = this.groupXR.position.clone();
 
-        const quat = this.getRotationYaw(ctrl.gamepad.axes[2]);
-        this.applyTransformationToXR(trans, quat);
+        const trans = this.groupXR.position.clone();
+        let offsetRotation;
+
+        //  Only apply rotation on 1 axis at the time
+        if (Math.abs(ctrl.gamepad.axes[2]) > Math.abs(ctrl.gamepad.axes[3])) {
+            offsetRotation = this.getRotationYaw(ctrl.gamepad.axes[2]);
+        } else {
+            offsetRotation = this.getRotationRoll(ctrl.gamepad.axes[3]);
+        }
+
+        this.applyTransformationToXR(trans, offsetRotation);
     }
 
     // Right axis stops.
