@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import Coordinates from 'Core/Geographic/Coordinates';
-import { DEMUtils, XRControllerModelFactory } from 'Main.js';
-import { Vector3 } from 'three';
-
+import DEMUtils from 'Utils/DEMUtils';
+import { XRControllerModelFactory } from 'ThreeExtended/webxr/XRControllerModelFactory';
 
 /**
  * Controller.userData {
@@ -11,6 +10,7 @@ import { Vector3 } from 'three';
  * }
  * Requires a contextXR variable.
  * @param {*} _view itowns view object
+ * @param {*} _groupXR XR 3D object group
  */
 class VRControls {
     static MIN_DELTA_ALTITUDE = 1.8;
@@ -312,22 +312,22 @@ Adding a few internal states for reactivity
      ======================= */
 
     // Right select ends.
-    onSelectRightEnd(data) {
+    onSelectRightEnd() {
     // Uncomment and implement teleportation if needed:
     }
 
     // Right select starts.
-    onSelectRightStart(data) {
+    onSelectRightStart() {
     // No operation needed yet.
     }
 
     // Left select starts.
-    onSelectLeftStart(data) {
+    onSelectLeftStart() {
     // No operation needed yet.
     }
 
     // Left select ends.
-    onSelectLeftEnd(data) {
+    onSelectLeftEnd() {
         // No operation needed yet.
     }
     onSelectStart(data) {
@@ -370,7 +370,7 @@ Adding a few internal states for reactivity
     }
 
     // Left button pressed.
-    onLeftButtonPressed(data) {
+    onLeftButtonPressed() {
     // No operation defined.
     }
 
@@ -435,12 +435,12 @@ Adding a few internal states for reactivity
     }
 
     // Right axis stops.
-    onRightAxisStop(data) {
+    onRightAxisStop() {
         // No operation defined.
     }
 
     // Left axis stops.
-    onLeftAxisStop(data) {
+    onLeftAxisStop() {
         // No operation defined.
     }
 
@@ -455,13 +455,12 @@ Adding a few internal states for reactivity
         }
     }
     // Right button released.
-    onRightButtonReleased(data) {
-    // No operation defined.
+    onRightButtonReleased() {
         this.rightButtonPressed = false;
     }
 
     // Left button released.
-    onLeftButtonReleased(data) {
+    onLeftButtonReleased() {
     // No operation defined.
     }
 }
