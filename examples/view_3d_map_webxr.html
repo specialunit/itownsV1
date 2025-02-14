@@ -14,6 +14,7 @@
         <script type="importmap">
             {
                 "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
                     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
                 }
             }
@@ -40,11 +41,7 @@
             const viewerDiv = document.getElementById('viewerDiv');
 
             // Create a GlobeView
-            const view = new itowns.GlobeView(viewerDiv, placement, {
-                webXR: { scale: 0.005 },
-            });
-            // Temporary workaround to https://github.com/iTowns/itowns/issues/2473
-            view.scene.matrixWorldAutoUpdate = true;
+            const view = new itowns.GlobeView(viewerDiv, placement, { webXR: { controllers: true } });
 
             // Instantiate three's VR Button
             const vrButton = VRButton.createButton(view.renderer);

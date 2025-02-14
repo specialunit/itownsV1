@@ -313,6 +313,15 @@ class OGC3DTilesLayer extends GeometryLayer {
         if (config.sseThreshold) {
             this.sseThreshold = config.sseThreshold;
         }
+        // Used for custom schedule callbacks (VR)
+        this.tasks = [];
+
+        this.tilesSchedulingCB = (func) => {
+            this.tasks.push(func);
+        };
+        // // We set our scheduling callback for tiles downloading and parsing / important for VR https://github.com/NASA-AMMOS/3DTilesRendererJS/issues/213
+        this.tilesRenderer.downloadQueue.schedulingCallback = this.tilesSchedulingCB;
+        this.tilesRenderer.parseQueue.schedulingCallback = this.tilesSchedulingCB;
     }
 
     /**
@@ -436,9 +445,15 @@ class OGC3DTilesLayer extends GeometryLayer {
             }
         }
     }
-
+    handleTasks() {
+        for (let t = 0, l = this.tasks.length; t < l; t++) {
+            this.tasks[t]();
+        }
+        this.tasks.length = 0;
+    }
     preUpdate(context) {
         this.scale = context.camera._preSSE;
+        this.handleTasks();
         this.tilesRenderer.update();
         return null; // don't return any element because 3d-tiles-renderer already updates them
     }
