@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { VRControls } from 'Main.js';
+import VRControls from 'Controls/VRControls';
 
 // TODO handle xr session end
 
@@ -10,9 +10,10 @@ import { VRControls } from 'Main.js';
  */
 const initializeWebXR = (view, options) => {
     const xr = view.renderer.xr;
-    xr.enabled = true;
 
     xr.addEventListener('sessionstart', () => {
+        xr.enabled = true;
+
         let vrControls;
 
         xr.getReferenceSpace('local');

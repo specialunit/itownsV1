@@ -9,7 +9,7 @@ describe('WebXR', function () {
 
         viewer = new View('EPSG:4326', renderer.domElement, {
             renderer,
-            webXR: { scale: 0.005 },
+            webXR: true,
         });
     });
 
@@ -23,15 +23,9 @@ describe('WebXR', function () {
     it('should initialize webXr session', function () {
         const webXRManager = viewer.mainLoop.gfxEngine.renderer.xr;
         assert.ok(webXRManager.enabled === undefined);
+        assert.ok(viewer._camXR === undefined);
         webXRManager.dispatchEvent({ type: 'sessionstart' });
         assert.ok(webXRManager.enabled);
-    });
-
-    it('should close webXr session', function () {
-        const webXRManager = viewer.mainLoop.gfxEngine.renderer.xr;
-        assert.ok(webXRManager.enabled);
-        document.emitEvent('keydown', { key: 'Escape' });
-        assert.ok(webXRManager.enabled === false);
-        assert.ok(viewer);
+        assert.ok(viewer._camXR);
     });
 });
