@@ -1,6 +1,6 @@
 {
   "name": "@itowns/geographic",
-  "version": "2.44.3-next.40",
+  "version": "2.44.3-next.41",
   "description": "Geodesy",
   "type": "module",
   "main": "lib/Main.js",
