@@ -1,7 +1,10 @@
 import { TextureLoader, DataTexture, RedFormat, FloatType } from 'three';
 
+const TEXTURE_TILE_DIM = 256;
+const TEXTURE_TILE_SIZE = TEXTURE_TILE_DIM * TEXTURE_TILE_DIM;
+
 const textureLoader = new TextureLoader();
-const SIZE_TEXTURE_TILE = 256;
+
 function checkResponse(response) {
     if (!response.ok) {
         const error = new Error(`Error loading ${response.url}: status ${response.status}`);
@@ -14,13 +17,6 @@ const arrayBuffer = (url, options = {}) => fetch(url, options).then((response) =
     checkResponse(response);
     return response.arrayBuffer();
 });
-
-function getTextureFloat(buffer) {
-    const texture = new DataTexture(buffer, SIZE_TEXTURE_TILE, SIZE_TEXTURE_TILE, RedFormat, FloatType);
-    texture.internalFormat = 'R32F';
-    texture.needsUpdate = true;
-    return texture;
-}
 
 /**
  * Utilitary to fetch resources from a server using the [fetch API](
@@ -137,8 +133,13 @@ export default {
      */
     textureFloat(url, options = {}) {
         return arrayBuffer(url, options).then((buffer) => {
-            const floatArray = new Float32Array(buffer);
-            const texture = getTextureFloat(floatArray);
+            if (buffer.byteLength !== TEXTURE_TILE_SIZE * Float32Array.BYTES_PER_ELEMENT) {
+                throw new Error(`Invalid float data from URL: \`${url}\``);
+            }
+            const data = new Float32Array(buffer);
+            const texture = new DataTexture(data, TEXTURE_TILE_DIM, TEXTURE_TILE_DIM, RedFormat, FloatType);
+            texture.internalFormat = 'R32F';
+            texture.needsUpdate = true;
             return texture;
         });
     },

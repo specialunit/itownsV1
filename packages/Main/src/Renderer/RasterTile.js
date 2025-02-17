@@ -202,8 +202,8 @@ export class RasterElevationTile extends RasterTile {
                     zmax: this.layer.zmax,
                 });
             if (this.min != min || this.max != max) {
-                this.min = min;
-                this.max = max;
+                this.min = isNaN(min) ? this.min : min;
+                this.max = isNaN(max) ? this.max : max;
             }
         }
     }
