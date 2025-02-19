@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import proj4 from 'proj4';
-import Ellipsoid from 'Ellipsoid';
+import Ellipsoid from './Ellipsoid';
 import * as CRS from './Crs';
 
 import type { ProjectionLike } from './Crs';

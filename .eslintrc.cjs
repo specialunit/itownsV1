@@ -19,7 +19,7 @@ module.exports = {
         'import/resolver': {
             'babel-module': {
                 alias: {
-                    '@itowns/geographic': path.resolve(__dirname, 'packages/Geographic/src/Main.js'),
+                    '@itowns/geographic': path.resolve(__dirname, 'packages/Geographic/src/Main.ts'),
                     itowns: path.resolve(__dirname, 'packages/Main/src/Main.js'),
                 },
                 plugins: [
