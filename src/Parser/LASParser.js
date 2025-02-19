@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { spawn, Thread, Transfer } from 'threads';
 import proj4 from 'proj4';
+import OrientationUtils from 'Utils/OrientationUtils';
+import Coordinates from 'Core/Geographic/Coordinates';
 
 let _lazPerf;
 let _thread;
@@ -49,6 +51,20 @@ function buildBufferGeometry(attributes) {
     geometry.setAttribute('scanAngle', scanAngle);
 
     geometry.userData.origin = new THREE.Vector3().fromArray(attributes.origin);
+    const rotation = new THREE.Quaternion().fromArray(attributes.rotation);
+    geometry.applyQuaternion(rotation);
+    geometry.userData.rotation = rotation;
+
+    return geometry;
+}
+
+function buildBufferGeometry2(position) {
+    const geometry = new THREE.BufferGeometry();
+
+    const positionBuffer = new THREE.BufferAttribute(position, 3);
+    geometry.setAttribute('position', positionBuffer);
+
+    // geometry.userData.origin = new THREE.Vector3().fromArray(attributes.originz0);
 
     return geometry;
 }
@@ -122,7 +138,14 @@ export default {
             },
         });
 
+        const origin = new Coordinates(options.out.crs, ...parsedData.attributes.origin);
+        console.log('parse', parsedData.attributes.origin, origin);
+
+        const rotation = OrientationUtils.quaternionFromCRSToCRS(options.out.crs, options.in.crs)(origin);
+        console.log('quaternionFromCRSToCRS', rotation);
+
         const geometry = buildBufferGeometry(parsedData.attributes);
+        geometry.userData.rotation = rotation;
         geometry.computeBoundingBox();
         return geometry;
     },
@@ -161,10 +184,37 @@ export default {
                 projDefs: proj4.defs(options.out.crs),
             },
         });
+        // console.log(parsedData.attributes);
 
+        // const origin = new Coordinates(options.out.crs, ...parsedData.attributes.origin);
+        // console.log('parse', parsedData.attributes.origin, origin);
+
+        // const rotation = OrientationUtils.quaternionFromCRSToCRS2(options.in.crs, options.out.crs)(origin);
+        // console.log('quaternionFromCRSToCRS', rotation);
         const geometry = buildBufferGeometry(parsedData.attributes);
         geometry.computeBoundingBox();
         geometry.userData.header = parsedData.header;
+
+        console.log('#################');
+        // const test = new THREE.Quaternion().copy(parsedData.attributes.rotation);
+        console.log(parsedData.attributes.rotation, geometry.userData.rotation);
+        console.log('^^^^^');
+
+        const geometry2 = buildBufferGeometry2(parsedData.attributes.position2);
+        geometry2.computeBoundingBox();
+        geometry2.userData.header = parsedData.header;
+        geometry2.userData.origin = new THREE.Vector3().fromArray(parsedData.attributes.originz0);
+        geometry2.userData.rotation = parsedData.attributes.rotation;
+
+        const geometry3 = buildBufferGeometry2(parsedData.attributes.position3);
+        geometry3.computeBoundingBox();
+        geometry3.userData.header = parsedData.header;
+        geometry3.userData.origin = new THREE.Vector3().fromArray(parsedData.attributes.origin4978);
+        geometry3.userData.rotation = parsedData.attributes.rotation;
+
+        console.log(geometry.boundingBox);
+        console.log(geometry2.boundingBox);
+        console.log(geometry3.boundingBox);
         return geometry;
     },
 };

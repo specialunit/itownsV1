@@ -69,7 +69,8 @@
     "lru-cache": "^11.0.1",
     "pbf": "^4.0.1",
     "shpjs": "^6.1.0",
-    "threads": "^1.7.0"
+    "threads": "^1.7.0",
+    "wkt-parser": "^1.4.0"
   },
   "peerDependencies": {
     "proj4": "^2.12.1",

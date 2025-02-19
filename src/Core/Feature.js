@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import Extent from 'Core/Geographic/Extent';
+import OrientationUtils from 'Utils/OrientationUtils';
 import Coordinates from 'Core/Geographic/Coordinates';
 import StyleOptions from 'Core/StyleOptions';
 
@@ -371,14 +372,25 @@ export class FeatureCollection extends THREE.Object3D {
             this.extent = options.buildExtent ? defaultExtent(options.forcedExtentCrs || this.crs) : undefined;
             this.#setLocalSystem = (center) => {
                 // set local system center
-                center.as('EPSG:4326', this.center);
+                this.center = center.as('EPSG:4326');
+                console.log(this.center, center);
+                // this.center => 'EPSG:4326'
+                // center => 'EPSG:4978'
 
                 if (this.crs == 'EPSG:4978') {
                     // align Z axe to geodesic normal.
                     this.quaternion.setFromUnitVectors(axisZ, center.geodesicNormal);
                     // align Y axe to East
                     alignYtoEast.setFromAxisAngle(axisZ, THREE.MathUtils.degToRad(90 + this.center.longitude));
-                    this.quaternion.multiply(alignYtoEast);
+                    // this.quaternion.multiply(alignYtoEast);
+
+                    console.log(this.quaternion);
+                    console.log('this.center', this.center);
+                    console.log('center', center);
+                    console.log(OrientationUtils.quaternionFromCRSToCRS('EPSG:4326', 'EPSG:4978')(center));
+                    console.log(OrientationUtils.quaternionFromCRSToCRS('EPSG:4978', 'EPSG:4326')(this.center));
+
+                    console.log(center.toVector3().applyQuaternion(this.quaternion.invert()));
                 }
 
                 // set position to local system center
@@ -404,6 +416,18 @@ export class FeatureCollection extends THREE.Object3D {
     transformToLocalSystem(coordinates) {
         this.#setLocalSystem(coordinates);
         return this.#transformToLocalSystem(coordinates, this);
+        // return this.transformToLocalSystem3D(coordinates, this);
+        // const transformToLocalSystem3D = (coord, collection) => {
+        //     coord.geodesicNormal.applyNormalMatrix(collection.normalMatrixInverse);
+        //     return coord.applyMatrix4(collection.matrixWorldInverse);
+        // };
+    }
+
+    transformToLocalSystem_ForPt(coordinates) {
+        this.#setLocalSystem(coordinates);
+        // return this.transformToLocalSystem3D(coordinates, this);
+        coordinates.geodesicNormal.applyNormalMatrix(this.normalMatrixInverse);
+        return coordinates.applyMatrix4(this.matrixWorldInverse);
     }
 
     /**

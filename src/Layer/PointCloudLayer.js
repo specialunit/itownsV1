@@ -3,6 +3,10 @@ import GeometryLayer from 'Layer/GeometryLayer';
 import PointsMaterial, { PNTS_MODE } from 'Renderer/PointsMaterial';
 import Picking from 'Core/Picking';
 import proj4 from 'proj4';
+import OrientationUtils from 'Utils/OrientationUtils';
+import OBBHelper from 'Utils/OBBHelper';
+import { Coordinates } from 'Main';
+import { OBB } from 'ThreeExtended/math/OBB';
 
 const point = new THREE.Vector3();
 const bboxMesh = new THREE.Mesh();
@@ -10,7 +14,13 @@ const box3 = new THREE.Box3();
 bboxMesh.geometry.boundingBox = box3;
 
 function initBoundingBox(elt, layer) {
-    elt.tightbbox.getSize(box3.max);
+    const newbbox = elt.bbox.clone();
+    elt.obj.box3Helper = new THREE.Box3Helper(newbbox, 0xffff00);// yellow
+    layer.bboxes.add(elt.obj.box3Helper);
+    elt.obj.box3Helper.updateMatrixWorld(true);
+
+    const newtightbbox = elt.tightbbox.clone();
+    newtightbbox.getSize(box3.max);
     box3.max.multiplyScalar(0.5);
     box3.min.copy(box3.max).negate();
     elt.obj.boxHelper = new THREE.BoxHelper(bboxMesh);
@@ -20,11 +30,29 @@ function initBoundingBox(elt, layer) {
     elt.obj.boxHelper.material.color.setHex(0);
     elt.obj.boxHelper.material.linewidth = 2;
     elt.obj.boxHelper.frustumCulled = false;
-    elt.obj.boxHelper.position.copy(elt.tightbbox.min).add(box3.max);
+    elt.obj.boxHelper.position.copy(newtightbbox.min).add(box3.max);
     elt.obj.boxHelper.autoUpdateMatrix = false;
     layer.bboxes.add(elt.obj.boxHelper);
     elt.obj.boxHelper.updateMatrix();
     elt.obj.boxHelper.updateMatrixWorld();
+}
+
+function initOrientedBox(elt, layer) {
+    const newobb = elt.obb.clone();
+    // const zmin = clamp(newobb.center.z - newobb.halfSize.z, layer.minElevationRange, layer.maxElevationRange);
+    // const zmax = clamp(newobb.center.z + newobb.halfSize.z, layer.minElevationRange, layer.maxElevationRange);
+    // newobb.center.z = (zmin + zmax) / 2;
+    // newobb.halfSize.z = Math.abs(zmax - zmin) / 2;
+    elt.obj.obbHelper = new OBBHelper(newobb, 0xff00ff);// violet
+    elt.obj.obbHelper.position.copy(elt.obb.position);
+    layer.obbes.add(elt.obj.obbHelper);
+    elt.obj.obbHelper.updateMatrixWorld();
+
+    const newtightobb = elt.tightobb.clone();
+    elt.obj.tightobbHelper = new OBBHelper(newtightobb, 0x00ff00);// vert
+    elt.obj.tightobbHelper.position.copy(elt.tightobb.position);
+    layer.obbes.add(elt.obj.tightobbHelper);
+    elt.obj.tightobbHelper.updateMatrixWorld();
 }
 
 function computeSSEPerspective(context, pointSize, spacing, elt, distance) {
@@ -71,6 +99,7 @@ function markForDeletion(elt) {
         if (__DEBUG__) {
             if (elt.obj.boxHelper) {
                 elt.obj.boxHelper.visible = false;
+                elt.obj.box3Helper.visible = false;
             }
         }
     }
@@ -154,6 +183,7 @@ class PointCloudLayer extends GeometryLayer {
             object3d = new THREE.Group(),
             group = new THREE.Group(),
             bboxes = new THREE.Group(),
+            obbes = new THREE.Group(),
             octreeDepthLimit = -1,
             pointBudget = 2000000,
             pointSize = 2,
@@ -180,9 +210,16 @@ class PointCloudLayer extends GeometryLayer {
 
         this.group = group;
         this.object3d.add(this.group);
+
         this.bboxes = bboxes || new THREE.Group();
+        this.bboxes.name = 'bboxes';
         this.bboxes.visible = false;
         this.object3d.add(this.bboxes);
+
+        this.obbes = obbes || new THREE.Group();
+        this.obbes.name = 'obbes';
+        this.obbes.visible = false;
+        this.object3d.add(this.obbes);
         this.group.updateMatrixWorld();
 
         // default config
@@ -233,6 +270,7 @@ class PointCloudLayer extends GeometryLayer {
     }
 
     setRootBbox(min, max) {
+        console.log('setRootBbox', min, max);
         let forward = (x => x);
         if (this.source.crs !== this.crs) {
             try {
@@ -246,8 +284,24 @@ class PointCloudLayer extends GeometryLayer {
             ...forward(min),
             ...forward(max),
         ];
+        console.log(bounds);
 
         this.root.bbox.setFromArray(bounds);
+        const centerBBox = new THREE.Vector3();
+        this.root.bbox.getCenter(centerBBox);
+
+        const center = new Coordinates(this.crs).setFromVector3(centerBBox);
+        const rotation = OrientationUtils.quaternionFromCRSToCRS(this.crs, 'EPSG:4326')(center);
+        this.root.bbox.rotation = rotation;
+        console.log(this.root.bbox, centerBBox, center, rotation);
+        this.root.obb = new OBB().fromBox3(this.root.bbox);
+        console.log(this.root.obb);
+        // const rot4 = new THREE.Matrix4().makeRotationFromQuaternion(rotation);
+        const rot4 = new THREE.Matrix4();
+        console.log(rotation, rot4);
+        this.root.obb.applyMatrix4(rot4);
+        // this.root.obb.position = this.root.obb.center;
+        this.root.obb.position = new THREE.Vector3();
     }
 
     setElevationRange(zmin, zmax) {
@@ -340,6 +394,21 @@ class PointCloudLayer extends GeometryLayer {
                         elt.obj.boxHelper.visible = true;
                         elt.obj.boxHelper.material.color.r = 1 - elt.sse;
                         elt.obj.boxHelper.material.color.g = elt.sse;
+
+                        elt.obj.box3Helper.visible = true;
+                    }
+                    if (this.obbes.visible) {
+                        if (!elt.obj.obbHelper) {
+                            initOrientedBox(elt, layer);
+                        }
+
+                        elt.obj.obbHelper.visible = true;
+                        // elt.obj.obbHelper.material.color.r = 1 - elt.sse;
+                        // elt.obj.obbHelper.material.color.g = elt.sse;
+
+                        // elt.obj.tightobbHelper.visible = true;
+                        // elt.obj.tightobbHelper.material.color.r = 1 - elt.sse;
+                        // elt.obj.tightobbHelper.material.color.g = elt.sse;
                     }
                 }
             } else if (!elt.promise) {
@@ -357,6 +426,11 @@ class PointCloudLayer extends GeometryLayer {
                     elt.obj = pts;
                     // store tightbbox to avoid ping-pong (bbox = larger => visible, tight => invisible)
                     elt.tightbbox = pts.tightbbox;
+                    elt.tightobb = new OBB().fromBox3(pts.tightbbox);
+                    elt.tightobb.position = new THREE.Vector3();
+                    const rotation = new THREE.Matrix4().makeRotationFromQuaternion(pts.quaternion);
+                    console.log(elt.tightobb);
+                    elt.tightobb.rotation = new THREE.Matrix3().setFromMatrix4(rotation);
 
                     // make sure to add it here, otherwise it might never
                     // be added nor cleaned
@@ -453,10 +527,15 @@ class PointCloudLayer extends GeometryLayer {
                             for (const material of obj.boxHelper.material) {
                                 material.dispose();
                             }
+                            for (const material of obj.box3Helper.material) {
+                                material.dispose();
+                            }
                         } else {
                             obj.boxHelper.material.dispose();
+                            obj.box3Helper.material.dispose();
                         }
                         obj.boxHelper.geometry.dispose();
+                        obj.box3Helper.geometry.dispose();
                     }
                 }
             }

@@ -186,6 +186,7 @@ export default {
         // UI
         const debugUI = layer.debugUI.addFolder('Debug');
         debugUI.add(layer.bboxes, 'visible').name('Display Bounding Boxes').onChange(update);
+        debugUI.add(layer.obbes, 'visible').name('Display Oriented Boxes').onChange(update);
         debugUI.add(layer, 'dbgStickyNode').name('Sticky node name').onChange(update);
         debugUI.add(layer, 'dbgDisplaySticky').name('Display sticky node').onChange(update);
         debugUI.add(layer, 'dbgDisplayChildren').name('Display children of sticky node').onChange(update);

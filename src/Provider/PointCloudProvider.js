@@ -36,10 +36,18 @@ export default {
             addPickingAttribute(points);
             points.frustumCulled = false;
             points.matrixAutoUpdate = false;
-            points.position.copy(geometry.userData.origin || node.bbox.min);
             points.scale.copy(layer.scale);
+            points.position.copy(geometry.userData.origin || node.bbox.min);
             points.updateMatrix();
+            // points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
             points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
+
+
+            points.quaternion.copy(geometry.userData.rotation.invert());
+            points.updateMatrix();
+            console.log('PointCloudProvider', points);
+            // points.updateMatrix();
+            // points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
             points.layer = layer;
             points.extent = Extent.fromBox3(command.view.referenceCrs, node.bbox);
             points.userData.node = node;
