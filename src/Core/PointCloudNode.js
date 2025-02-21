@@ -24,8 +24,11 @@ class PointCloudNode extends THREE.EventDispatcher {
             this.loadOctree();
         }
 
+        const center = new THREE.Vector3();
+        this.bbox.getCenter(center);
+
         return this.layer.source.fetcher(this.url, this.layer.source.networkOptions)
-            .then(file => this.layer.source.parse(file, { out: this.layer, in: this.layer.source }));
+            .then(file => this.layer.source.parse(file, { out: this.layer, in: { ...this.layer.source, center } }));
     }
 
     findCommonAncestor(node) {

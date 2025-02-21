@@ -38,16 +38,15 @@ export default {
             points.matrixAutoUpdate = false;
             points.scale.copy(layer.scale);
             points.position.copy(geometry.userData.origin || node.bbox.min);
-            points.updateMatrix();
-            // points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
-            points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
 
+            const boxHelper = new THREE.BoxHelper(points, 0xff00ff);
+            points.add(boxHelper);
 
-            points.quaternion.copy(geometry.userData.rotation.invert());
+            const quaternion = geometry.userData.rotation.clone().invert();
+            points.quaternion.copy(quaternion);
             points.updateMatrix();
-            console.log('PointCloudProvider', points);
-            // points.updateMatrix();
-            // points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
+
+            points.tightbbox = geometry.boundingBox.clone().applyMatrix4(points.matrix);
             points.layer = layer;
             points.extent = Extent.fromBox3(command.view.referenceCrs, node.bbox);
             points.userData.node = node;

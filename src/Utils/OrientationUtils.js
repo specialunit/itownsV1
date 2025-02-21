@@ -353,7 +353,6 @@ export default {
         const proj = crsOrProj.projName ? crsOrProj : proj4.defs(crsOrProj);
         switch (proj.projName) {
             case 'geocent': return this.quaternionFromEnuToGeocent();
-            case 'Lambert_Conformal_Conic_2SP':
             case 'lcc': return this.quaternionFromEnuToLCC(proj);
             case 'tmerc': return this.quaternionFromEnuToTMerc(proj);
             case 'longlat': return this.quaternionFromEnuToLongLat();
@@ -378,7 +377,6 @@ export default {
         const proj = crsOrProj.projName ? crsOrProj : proj4.defs(crsOrProj);
         switch (proj.projName) {
             case 'geocent': return this.quaternionFromGeocentToEnu();
-            case 'Lambert_Conformal_Conic_2SP':
             case 'lcc': return this.quaternionFromLCCToEnu(proj);
             case 'tmerc': return this.quaternionFromTMercToEnu(proj);
             case 'longlat': return this.quaternionFromLongLatToEnu();
@@ -406,28 +404,10 @@ export default {
         // get rotations from the local East/North/Up (ENU) frame to both CRS.
         const fromCrs = this.quaternionFromCRSToEnu(crsIn);
         const toCrs = this.quaternionFromEnuToCRS(crsOut);
-        return (origin, target = new THREE.Quaternion()) =>
-            toCrs(origin, target).multiply(fromCrs(origin, quat));
-    },
-
-    quaternionFromCRSToCRS2(optIn, optOut) {
-        // console.log('  >quaternionFromCRSToCRS2', optIn, optOut);
-        proj4.defs(optIn.crs, optIn.projDefs);
-        proj4.defs(optOut.crs, optOut.projDefs);
-        // if (coordinates) { return this.quaternionFromCRSToCRS(crsIn, crsOut)(coordinates, target); }
-        const crsIn = optIn.crs;
-        const crsOut = optOut.crs;
-        if (crsIn == crsOut) {
-            return (origin, target = new THREE.Quaternion()) => target.set(0, 0, 0, 1);
-        }
-
-        // get rotations from the local East/North/Up (ENU) frame to both CRS.
-        const fromCrs = this.quaternionFromCRSToEnu(optIn.projDefs);
-        const toCrs = this.quaternionFromEnuToCRS(optOut.projDefs);
         return (origin, target = new THREE.Quaternion()) => {
-            origin = new Coordinates(crsIn, ...origin);
-            // origin = new Coordinates(crsOut, ...origin);
-            console.log('    quaternionFromCRSToCRS2', crsIn, crsOut, origin);
+            if (!origin.isCoordinates) {
+                origin = new Coordinates(crsIn, ...origin);
+            }
             return toCrs(origin, target).multiply(fromCrs(origin, quat));
         };
     },
