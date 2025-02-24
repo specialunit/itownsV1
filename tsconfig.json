@@ -7,9 +7,6 @@
         "module": "ESNext",
         "moduleResolution": "bundler",
         /* Emit */
-        "declaration": true,
-        "emitDeclarationOnly": true,
-        "outDir": "types",
         /* JavaScript Support */
         "allowJs": true,
         "checkJs": false, // set to true for type checking of js files

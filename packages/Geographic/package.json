@@ -4,13 +4,12 @@
   "description": "Geodesy",
   "type": "module",
   "main": "lib/Main.js",
-  "exports": {
-    ".": "./lib/Main.js"
-  },
+  "exports": "./lib/Main.js",
+  "types": "./lib/Main.d.ts",
   "scripts": {
     "build": "",
     "lint": "eslint \"src/**/*.{js,ts,tsx}\" \"test/**/*.js\"",
-    "transpile": "cross-env BABEL_DISABLE_CACHE=1 babel src --out-dir lib --extensions .js,.ts",
+    "transpile": "tsc && cross-env BABEL_DISABLE_CACHE=1 babel src --out-dir lib --extensions .js,.ts",
     "test-unit": "npm run base-test-unit test/unit",
     "base-test-unit": "cross-env BABEL_DISABLE_CACHE=1 mocha --import=../../config/babel-register/register.mjs",
     "test-with-coverage": "c8 -n src -r html cross-env npm run test-unit",

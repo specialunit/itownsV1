@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import proj4 from 'proj4';
-import Coordinates from 'Coordinates';
+import Coordinates from './Coordinates';
 
 /**
  * Length of the semi-axes of the WGS84 ellipsoid.
