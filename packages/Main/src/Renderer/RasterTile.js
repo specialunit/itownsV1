@@ -61,12 +61,13 @@ class RasterTile extends THREE.EventDispatcher {
     initFromParent(parent, extents) {
         if (parent && parent.level > this.level) {
             let index = 0;
-            for (const c of extents) {
-                for (const texture of parent.textures) {
-                    if (c.isInside(texture.extent)) {
-                        this.setTexture(index++, texture, c.offsetToParent(texture.extent));
-                        break;
-                    }
+            const sortedParentTextures = this.sortBestParentTextures(parent.textures);
+            for (const childExtent of extents) {
+                const matchingParentTexture = sortedParentTextures
+                    .find(parentTexture => parentTexture && childExtent.isInside(parentTexture.extent));
+                if (matchingParentTexture) {
+                    this.setTexture(index++, matchingParentTexture,
+                        childExtent.offsetToParent(matchingParentTexture.extent));
                 }
             }
 
@@ -78,6 +79,32 @@ class RasterTile extends THREE.EventDispatcher {
         }
     }
 
+    sortBestParentTextures(textures) {
+        const sortByValidity = (a, b) => {
+            if (a.isTexture === b.isTexture) {
+                return 0;
+            } else {
+                return a.isTexture ? -1 : 1;
+            }
+        };
+        const sortByZoom = (a, b) => b.extent.zoom - a.extent.zoom;
+
+        return textures.toSorted((a, b) => sortByValidity(a, b) || sortByZoom(a, b));
+    }
+
+    disposeRedrawnTextures(newTextures) {
+        const validTextureIndexes = newTextures
+            .map((texture, index) => (this.shouldWriteTextureAtIndex(index, texture) ? index : -1))
+            .filter(index => index !== -1);
+
+        if (validTextureIndexes.length === newTextures.length) {
+            // Dispose the whole tile when all textures are overwritten
+            this.dispose(false);
+        } else {
+            this.disposeAtIndexes(validTextureIndexes);
+        }
+    }
+
     dispose(removeEvent = true) {
         if (removeEvent) {
             this.layer.removeEventListener('visible-property-changed', this._handlerCBEvent);
@@ -86,29 +113,42 @@ class RasterTile extends THREE.EventDispatcher {
             this._listeners = {};
         }
         // TODO: WARNING  verify if textures to dispose aren't attached with ancestor
-        for (const texture of this.textures) {
-            if (texture.isTexture) {
+        // Dispose all textures
+        this.disposeAtIndexes(this.textures.keys());
+        this.textures = [];
+        this.offsetScales = [];
+        this.level = EMPTY_TEXTURE_ZOOM;
+    }
+
+    disposeAtIndexes(indexes) {
+        for (const index of indexes) {
+            const texture = this.textures[index];
+            if (texture && texture.isTexture) {
                 texture.dispose();
             }
         }
-        this.level = EMPTY_TEXTURE_ZOOM;
-        this.textures = [];
-        this.offsetScales = [];
         this.material.layersNeedUpdate = true;
     }
 
     setTexture(index, texture, offsetScale) {
-        this.level = (texture && texture.extent && (index == 0)) ? texture.extent.zoom : this.level;
-        this.textures[index] = texture || null;
-        this.offsetScales[index] = offsetScale;
-        this.material.layersNeedUpdate = true;
+        if (this.shouldWriteTextureAtIndex(index, texture)) {
+            this.level = (texture && texture.extent) ? texture.extent.zoom : this.level;
+            this.textures[index] = texture || null;
+            this.offsetScales[index] = offsetScale;
+            this.material.layersNeedUpdate = true;
+        }
     }
 
     setTextures(textures, pitchs) {
-        this.dispose(false);
+        this.disposeRedrawnTextures(textures);
         for (let i = 0, il = textures.length; i < il; ++i) {
             this.setTexture(i, textures[i], pitchs[i]);
         }
+    }
+
+    shouldWriteTextureAtIndex(index, texture) {
+        // Do not apply noData texture if current texture is valid
+        return !this.textures[index] || texture && texture.isTexture;
     }
 }
 
@@ -182,8 +222,12 @@ export class RasterElevationTile extends RasterTile {
     }
 
     setTextures(textures, offsetScales) {
+        const anyValidTexture = textures.find(texture => texture != null);
+        if (!anyValidTexture) {
+            return;
+        }
         const currentLevel = this.level;
-        this.replaceNoDataValueFromTexture(textures[0]);
+        this.replaceNoDataValueFromTexture(anyValidTexture);
         super.setTextures(textures, offsetScales);
         this.updateMinMaxElevation();
         if (currentLevel !== this.level) {
@@ -192,10 +236,11 @@ export class RasterElevationTile extends RasterTile {
     }
 
     updateMinMaxElevation() {
-        if (this.textures[0] && !this.layer.useColorTextureElevation) {
+        const firstValidIndex = this.textures.findIndex(texture => texture.isTexture);
+        if (firstValidIndex !== -1 && !this.layer.useColorTextureElevation) {
             const { min, max } = computeMinMaxElevation(
-                this.textures[0],
-                this.offsetScales[0],
+                this.textures[firstValidIndex],
+                this.offsetScales[firstValidIndex],
                 {
                     noDataValue: this.layer.noDataValue,
                     zmin: this.layer.zmin,
@@ -214,7 +259,7 @@ export class RasterElevationTile extends RasterTile {
             return;
         }
         // replace no data value with parent texture value or 0 (if no significant value found).
-        const parentTexture = this.textures[0];
+        const parentTexture = this.textures.find(texture => texture != null);
         const parentDataElevation = parentTexture && parentTexture.image && parentTexture.image.data;
         const dataElevation = texture.image && texture.image.data;
 

@@ -40,7 +40,13 @@ function buildCommand(view, layer, extentsSource, extentsDestination, requester)
         requester,
         priority: materialCommandQueuePriorityFunction(requester.material),
         earlyDropFunction: refinementCommandCancellationFn,
+        partialLoading: true,
     };
+}
+
+function computePitchs(textures, extentsDestination) {
+    return extentsDestination
+        .map((ext, i) => (ext.offsetToParent(textures[i].extent)));
 }
 
 export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
@@ -139,14 +145,16 @@ export function updateLayeredMaterialNodeImagery(context, layer, node, parent) {
     const command = buildCommand(context.view, layer, extentsSource, extentsDestination, node);
 
     return context.scheduler.execute(command).then(
-        (result) => {
+        (results) => {
             // Does nothing if the layer has been removed while command was being or waiting to be executed
             if (!node.layerUpdateState[layer.id]) {
                 return;
             }
+            const textures = results.map((texture, index) => (texture != null ? texture :
+                { isTexture: false, extent: extentsDestination[index] }));
             // TODO: Handle error : result is undefined in provider. throw error
-            const pitchs = extentsDestination.map((ext, i) => ext.offsetToParent(result[i].extent, nodeLayer.offsetScales[i]));
-            nodeLayer.setTextures(result, pitchs);
+            const pitchs = computePitchs(textures, extentsDestination);
+            nodeLayer.setTextures(textures, pitchs);
             node.layerUpdateState[layer.id].success();
         },
         err => handlingError(err, node, layer, targetLevel, context.view));
@@ -212,7 +220,7 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
     const command = buildCommand(context.view, layer, extentsSource, extentsDestination, node);
 
     return context.scheduler.execute(command).then(
-        (result) => {
+        (results) => {
             // Does nothing if the layer has been removed while command was being or waiting to be executed
             if (!node.layerUpdateState[layer.id]) {
                 return;
@@ -225,8 +233,8 @@ export function updateLayeredMaterialNodeElevation(context, layer, node, parent)
                 node.layerUpdateState[layer.id].noMoreUpdatePossible();
                 return;
             }
-            const pitchs = extentsDestination.map((ext, i) => ext.offsetToParent(result[i].extent, nodeLayer.offsetScales[i]));
-            nodeLayer.setTextures(result, pitchs);
+            const pitchs = computePitchs(results, extentsDestination);
+            nodeLayer.setTextures(results, pitchs);
             node.layerUpdateState[layer.id].success();
         },
         err => handlingError(err, node, layer, targetLevel, context.view));
