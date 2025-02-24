@@ -1,6 +1,6 @@
 {
   "private": true,
-  "version": "2.44.3-next.42",
+  "version": "2.44.3-next.43",
   "type": "module",
   "main": "lib/Main.js",
   "exports": {
@@ -28,11 +28,11 @@
   },
   "homepage": "https://itowns.github.io/",
   "dependencies": {
-    "@itowns/geographic": "^2.44.3-next.42",
+    "@itowns/geographic": "^2.44.3-next.43",
     "@tweenjs/tween.js": "^25.0.0",
     "chart.js": "^4.4.4",
     "dat.gui": "^0.7.9",
-    "itowns": "^2.44.3-next.42"
+    "itowns": "^2.44.3-next.43"
   },
   "peerDependencies": {
     "three": "^0.170.0"
