@@ -387,7 +387,15 @@ class PointCloudLayer extends GeometryLayer {
         if (elt.obj) {
             obj = elt.obj;
         } else {
-            elt.boxHelper = createBoxHelper(elt._bbox, elt._quaternion, elt._position);
+            // get a clamped bbox from the full bbox
+            const bbox = elt._bbox.clone();
+            if (bbox.min.z < layer.maxElevationRange) {
+                bbox.max.z = Math.min(bbox.max.z, layer.maxElevationRange);
+            }
+            if (bbox.max.z > layer.minElevationRange) {
+                bbox.min.z = Math.max(bbox.min.z, layer.minElevationRange);
+            }
+            elt.boxHelper = createBoxHelper(bbox, elt._quaternion, elt._position);
             obj = elt.boxHelper;
         }
         const bbox = obj.geometry.boundingBox;
