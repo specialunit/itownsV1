@@ -57,12 +57,11 @@
             var eptLayer, eptSource;
 
             function onLayerReady() {
-                var lookAt = new itowns.THREE.Vector3();
-                eptLayer.root.bbox.getCenter(lookAt);
-                var coordLookAt = new itowns.Coordinates(view.referenceCrs, lookAt);
+                var lookAt = eptLayer.root._position;
+                var coordLookAt = new itowns.Coordinates(view.referenceCrs).setFromVector3(lookAt);
 
                 var size = new itowns.THREE.Vector3();
-                eptLayer.root.bbox.getSize(size);
+                eptLayer.root._bbox.getSize(size);
 
                 view.controls.lookAtCoordinate({
                     coord: coordLookAt,

@@ -53,18 +53,19 @@
             function onLayerReady(layer) {
                 const camera = view.camera.camera3D;
 
-                const lookAt = new itowns.THREE.Vector3();
+                const lookAt = layer.root._position;
+                lookAt.z = (layer.maxElevationRange + layer.minElevationRange) * 0.5;
+
                 const size = new itowns.THREE.Vector3();
-                layer.root.bbox.getSize(size);
-                layer.root.bbox.getCenter(lookAt);
+                layer.root._bbox.getSize(size);
 
-                camera.far = 2.0 * size.length();
-
-                controls.groundLevel = layer.root.bbox.min.z;
-                const position = layer.root.bbox.min.clone().add(
-                    size.multiply({ x: 1, y: 1, z: size.x / size.z }),
+                controls.groundLevel = layer.minElevationRange;
+                var corner = new itowns.THREE.Vector3(...layer.source.header.min);
+                var position = corner.clone().add(
+                    size.multiply({ x: 0, y: 0, z: (size.x / size.z) })
                 );
 
+                camera.far = 2.0 * size.length();
                 camera.position.copy(position);
                 camera.lookAt(lookAt);
                 camera.updateProjectionMatrix();

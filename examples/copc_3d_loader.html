@@ -56,12 +56,11 @@
             var layer;
 
             function onLayerReady() {
-                var lookAt = new itowns.THREE.Vector3();
-                layer.root.bbox.getCenter(lookAt);
+                var lookAt = layer.root._position;
                 var coordLookAt = new itowns.Coordinates(view.referenceCrs).setFromVector3(lookAt);
 
                 var size = new itowns.THREE.Vector3();
-                layer.root.bbox.getSize(size);
+                layer.root._bbox.getSize(size);
 
                 view.controls.lookAtCoordinate({
                     coord: coordLookAt,
