@@ -404,7 +404,11 @@ export default {
         // get rotations from the local East/North/Up (ENU) frame to both CRS.
         const fromCrs = this.quaternionFromCRSToEnu(crsIn);
         const toCrs = this.quaternionFromEnuToCRS(crsOut);
-        return (origin, target = new THREE.Quaternion()) =>
-            toCrs(origin, target).multiply(fromCrs(origin, quat));
+        return (origin, target = new THREE.Quaternion()) => {
+            if (!origin.isCoordinates) {
+                origin = new Coordinates(crsIn, ...origin);
+            }
+            return toCrs(origin, target).multiply(fromCrs(origin, quat));
+        };
     },
 };

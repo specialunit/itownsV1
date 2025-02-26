@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { spawn, Thread, Transfer } from 'threads';
 import proj4 from 'proj4';
+import OrientationUtils from 'Utils/OrientationUtils';
 
 let _lazPerf;
 let _thread;
@@ -18,6 +19,21 @@ async function loader() {
     _thread = await spawn(workerInstance());
     if (_lazPerf) { _thread.lazPerf(_lazPerf); }
     return _thread;
+}
+
+function getOrigin(options) {
+    const center = options.out.center;
+    const centerCrsIn = proj4(options.out.crs, options.in.crs).forward(center);
+    return proj4(options.in.crs, options.out.crs).forward([centerCrsIn.x, centerCrsIn.y, 0]);
+}
+
+function getLocalRotation(options, origin) {
+    const isGeocentric = proj4.defs(options.out.crs).projName === 'geocent';
+    let rotation = new THREE.Quaternion();
+    if (isGeocentric) {
+        rotation = OrientationUtils.quaternionFromCRSToCRS(options.out.crs, 'EPSG:4326')(origin);
+    }
+    return rotation;
 }
 
 function buildBufferGeometry(attributes) {
@@ -47,8 +63,6 @@ function buildBufferGeometry(attributes) {
     }
     const scanAngle = new THREE.BufferAttribute(attributes.scanAngle, 1);
     geometry.setAttribute('scanAngle', scanAngle);
-
-    geometry.userData.origin = new THREE.Vector3().fromArray(attributes.origin);
 
     return geometry;
 }
@@ -107,6 +121,7 @@ export default {
      */
     async parseChunk(data, options = {}) {
         const lasLoader = await loader();
+        const origin = getOrigin(options);
         const parsedData = await lasLoader.parseChunk(Transfer(data), {
             pointCount: options.in.pointCount,
             header: options.in.header,
@@ -119,11 +134,16 @@ export default {
             out: {
                 crs: options.out.crs,
                 projDefs: proj4.defs(options.out.crs),
+                origin,
             },
         });
 
+        const rotation = getLocalRotation(options, origin);
         const geometry = buildBufferGeometry(parsedData.attributes);
+        geometry.applyQuaternion(rotation);
         geometry.computeBoundingBox();
+        geometry.userData.origin = new THREE.Vector3().fromArray(origin);
+        geometry.userData.rotation = rotation;
         return geometry;
     },
 
@@ -150,6 +170,7 @@ export default {
         }
 
         const lasLoader = await loader();
+        const origin = getOrigin(options);
         const parsedData = await lasLoader.parseFile(Transfer(data), {
             colorDepth: options.in.colorDepth,
             in: {
@@ -159,12 +180,18 @@ export default {
             out: {
                 crs: options.out.crs,
                 projDefs: proj4.defs(options.out.crs),
+                origin,
             },
         });
 
+        const rotation = getLocalRotation(options, origin);
         const geometry = buildBufferGeometry(parsedData.attributes);
+        geometry.applyQuaternion(rotation);
         geometry.computeBoundingBox();
+        geometry.userData.origin = new THREE.Vector3().fromArray(origin);
+        geometry.userData.rotation = rotation;
         geometry.userData.header = parsedData.header;
+
         return geometry;
     },
 };

@@ -1,10 +1,5 @@
-import * as THREE from 'three';
 import Fetcher from 'Provider/Fetcher';
 import PointCloudNode from 'Core/PointCloudNode';
-
-const size = new THREE.Vector3();
-const position = new THREE.Vector3();
-const translation = new THREE.Vector3();
 
 function buildId(depth, x, y, z) {
     return `${depth}-${x}-${y}-${z}`;
@@ -69,32 +64,6 @@ class EntwinePointTileNode extends PointCloudNode {
         this.url = `${this.layer.source.url}/ept-data/${this.id}.${this.layer.source.extension}`;
     }
 
-    createChildAABB(node) {
-        // factor to apply, based on the depth difference (can be > 1)
-        const f = 2 ** (node.depth - this.depth);
-
-        // size of the child node bbox (Vector3), based on the size of the
-        // parent node, and divided by the factor
-        this.bbox.getSize(size).divideScalar(f);
-
-        // initialize the child node bbox at the location of the parent node bbox
-        node.bbox.min.copy(this.bbox.min);
-
-        // position of the parent node, if it was at the same depth than the
-        // child, found by multiplying the tree position by the factor
-        position.copy(this).multiplyScalar(f);
-
-        // difference in position between the two nodes, at child depth, and
-        // scale it using the size
-        translation.subVectors(node, position).multiply(size);
-
-        // apply the translation to the child node bbox
-        node.bbox.min.add(translation);
-
-        // use the size computed above to set the max
-        node.bbox.max.copy(node.bbox.min).add(size);
-    }
-
     get octreeIsLoaded() {
         return this.numPoints >= 0;
     }
@@ -131,6 +100,8 @@ class EntwinePointTileNode extends PointCloudNode {
 
         if (typeof numPoints == 'number') {
             const child = new EntwinePointTileNode(depth, x, y, z, this.layer, numPoints);
+            child._quaternion = this._quaternion;
+            child._position = this._position;
             this.add(child);
             stack.push(child);
         }

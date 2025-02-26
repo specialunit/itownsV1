@@ -1,10 +1,5 @@
-import * as THREE from 'three';
 import { Hierarchy } from 'copc';
 import PointCloudNode from 'Core/PointCloudNode';
-
-const size = new THREE.Vector3();
-const position = new THREE.Vector3();
-const translation = new THREE.Vector3();
 
 function buildId(depth, x, y, z) {
     return `${depth}-${x}-${y}-${z}`;
@@ -60,37 +55,6 @@ class CopcNode extends PointCloudNode {
     }
 
     /**
-     * Create an (A)xis (A)ligned (B)ounding (B)ox for the given node given
-     * `this` is its parent.
-     * @param {CopcNode} node - The child node
-     */
-    createChildAABB(node) {
-        // factor to apply, based on the depth difference (can be > 1)
-        const f = 2 ** (node.depth - this.depth);
-
-        // size of the child node bbox (Vector3), based on the size of the
-        // parent node, and divided by the factor
-        this.bbox.getSize(size).divideScalar(f);
-
-        // initialize the child node bbox at the location of the parent node bbox
-        node.bbox.min.copy(this.bbox.min);
-
-        // position of the parent node, if it was at the same depth as the
-        // child, found by multiplying the tree position by the factor
-        position.copy(this).multiplyScalar(f);
-
-        // difference in position between the two nodes, at child depth, and
-        // scale it using the size
-        translation.subVectors(node, position).multiply(size);
-
-        // apply the translation to the child node bbox
-        node.bbox.min.add(translation);
-
-        // use the size computed above to set the max
-        node.bbox.max.copy(node.bbox.min).add(size);
-    }
-
-    /**
      * Create a CopcNode from the provided subtree and add it as child
      * of the current node.
      * @param {number} depth - Child node depth in the octree
@@ -130,6 +94,8 @@ class CopcNode extends PointCloudNode {
             this.layer,
             pointCount,
         );
+        child._quaternion = this._quaternion;
+        child._position = this._position;
         this.add(child);
         stack.push(child);
     }
@@ -178,13 +144,18 @@ class CopcNode extends PointCloudNode {
             await this.loadOctree();
         }
 
+        this.getCenter();
+
         const buffer = await this._fetch(this.entryOffset, this.entryLength);
         const geometry = await this.layer.source.parser(buffer, {
             in: {
                 ...this.layer.source,
                 pointCount: this.numPoints,
             },
-            out: this.layer,
+            out: {
+                ...this.layer,
+                center: this.center,
+            },
         });
 
         return geometry;

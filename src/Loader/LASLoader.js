@@ -65,6 +65,7 @@ class LASLoader {
         const getScanAngle = view.getter('ScanAngle');
 
         const positions = new Float32Array(view.pointCount * 3);
+
         const intensities = new Uint16Array(view.pointCount);
         const returnNumbers = new Uint8Array(view.pointCount);
         const numberOfReturns = new Uint8Array(view.pointCount);
@@ -80,10 +81,7 @@ class LASLoader {
         */
         const scanAngles = new Float32Array(view.pointCount);
 
-        // For precision we use the first point to define the origin for a local referentiel.
-        // After projection transformation and only the integer part for simplification.
-        const origin = forward(getPosition.map(f => f(0))).map(val => Math.floor(val));
-
+        const origin = options.out.origin;
         for (let i = 0; i < view.pointCount; i++) {
             // `getPosition` apply scale and offset transform to the X, Y, Z
             // values. See https://github.com/connormanning/copc.js/blob/master/src/las/extractor.ts.
@@ -130,7 +128,6 @@ class LASLoader {
             pointSourceID: pointSourceIDs,
             color: colors,
             scanAngle: scanAngles,
-            origin,
         };
     }
 

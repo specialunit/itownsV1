@@ -36,10 +36,13 @@ export default {
             addPickingAttribute(points);
             points.frustumCulled = false;
             points.matrixAutoUpdate = false;
-            points.position.copy(geometry.userData.origin || node.bbox.min);
             points.scale.copy(layer.scale);
+            points.position.copy(geometry.userData.origin || node.bbox.min);
+
+            const quaternion = geometry.userData.rotation.clone().invert();
+            points.quaternion.copy(quaternion);
             points.updateMatrix();
-            points.tightbbox = geometry.boundingBox.applyMatrix4(points.matrix);
+
             points.layer = layer;
             points.extent = Extent.fromBox3(command.view.referenceCrs, node.bbox);
             points.userData.node = node;
