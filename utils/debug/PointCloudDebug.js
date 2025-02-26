@@ -79,7 +79,7 @@ export default {
         layer.debugUI.add(layer, 'sseThreshold').name('SSE threshold').onChange(update);
         layer.debugUI.add(layer, 'octreeDepthLimit', -1, 20).name('Depth limit').onChange(update);
         layer.debugUI.add(layer, 'pointBudget', 1, 15000000).name('Max point count').onChange(update);
-        layer.debugUI.add(layer.object3d.position, 'z', -50, 50).name('Z translation').onChange(() => {
+        layer.debugUI.add(layer.object3d.position, 'z', -5000, 5000).name('Z translation').onChange(() => {
             layer.object3d.updateMatrixWorld();
             view.notifyChange(layer);
         });
